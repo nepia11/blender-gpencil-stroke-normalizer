@@ -45,16 +45,16 @@ def calc_frames_stroke_length_and_count(gp_frames: bpy.types.GPencilFrames, stro
     return lengths, counts, point_max_count
 
 
-def get_selected_frame_index(gp_frames: bpy.types.GPencilFrames) -> [bool]:
-    return [frame.select for frame in gp_frames]
+# def get_selected_frame_index(gp_frames: bpy.types.GPencilFrames) -> [bool]:
+#     return [frame.select for frame in gp_frames]
 
 
-def get_max_count_by_selected_frames(counts: [int], select_frame_indexs: [bool]) -> int:
-    max_count = 0
-    for i, count in enumerate(counts):
-        if select_frame_indexs[i] and count > max_count:
-            max_count = count
-    return max_count
+# def get_max_count_by_selected_frames(counts: [int], select_frame_indexs: [bool]) -> int:
+#     max_count = 0
+#     for i, count in enumerate(counts):
+#         if select_frame_indexs[i] and count > max_count:
+#             max_count = count
+#     return max_count
 
 
 # ストロークをポイント数でサンプリングする
@@ -64,8 +64,8 @@ def stroke_count_resampler(gp_stroke: bpy.types.GPencilStroke, result_count: int
     # サンプリングレートを決定
     sample_length = src_length / (result_count-1)
     # 適当なオフセットをつける 意味なかったかも
-    offset = sample_length / (result_count*2)
-    sample_length = sample_length + offset
+    # offset = sample_length / (result_count*2)
+    # sample_length = sample_length + offset
     # サンプリング実行
     gp_stroke.select = True
     bpy.ops.gpencil.stroke_sample(length=sample_length)
@@ -74,78 +74,65 @@ def stroke_count_resampler(gp_stroke: bpy.types.GPencilStroke, result_count: int
     return src_count, src_length, dst_count, result_count
 
 
-def get_layers_select_state(gp_data: bpy.types.GreasePencil) -> [bool]:
-    return [layer.select for layer in gp_data.layers]
+# def get_layers_select_state(gp_data: bpy.types.GreasePencil) -> [bool]:
+#     return [layer.select for layer in gp_data.layers]
 
 
-def get_frames_select_state(gp_frames: bpy.types.GPencilFrames) -> [bool]:
-    return [frame.select for frame in gp_frames]
+# def get_frames_select_state(gp_frames: bpy.types.GPencilFrames) -> [bool]:
+#     return [frame.select for frame in gp_frames]
 
 
-def get_strokes_select_state(gp_strokes: bpy.types.GPencilStrokes):
-    return [stroke.select for stroke in gp_strokes]
+# def get_strokes_select_state(gp_strokes: bpy.types.GPencilStrokes):
+#     return [stroke.select for stroke in gp_strokes]
 
 
-def get_strokes_select_state_by_frames(gp_frames: bpy.types.GPencilFrames) -> ([[bool]]):
-    return [get_strokes_select_state(frame.strokes) for frame in gp_frames]
+# def get_strokes_select_state_by_frames(gp_frames: bpy.types.GPencilFrames) -> ([[bool]]):
+#     return [get_strokes_select_state(frame.strokes) for frame in gp_frames]
 
 # この機能いるか？
 
 
-def get_select_state(gp_data: bpy.types.GreasePencil):
-    layers = gp_data.layers
-    layer_state = get_layers_select_state(gp_data)
-    # [layer0[bool,bool],layre1[,,,]]
-    frame_state = [get_frames_select_state(layer.frames) for layer in layers]
-    stroke_state = [get_strokes_select_state_by_frames(
-        layer.frames) for layer in layers]  # [l[f[s:bool,,],,],,]
-    return layer_state, frame_state, stroke_state
+# def get_select_state(gp_data: bpy.types.GreasePencil):
+#     layers = gp_data.layers
+#     layer_state = get_layers_select_state(gp_data)
+#     # [layer0[bool,bool],layre1[,,,]]
+#     frame_state = [get_frames_select_state(layer.frames) for layer in layers]
+#     stroke_state = [get_strokes_select_state_by_frames(
+#         layer.frames) for layer in layers]  # [l[f[s:bool,,],,],,]
+#     return layer_state, frame_state, stroke_state
 
 
 def gp_select_state(gp_data: bpy.types.GreasePencil):
     layers = gp_data.layers
 
+    def _lick(state, func):
+        for li, layer in enumerate(layers):
+            func(state["layers"][li]["select"], layer)
+            for fi, frame in enumerate(layer.frames):
+                func(state["layers"][li]["frames"][fi]["select"], frame)
+                for si, stroke in enumerate(frame.strokes):
+                    func(state["layers"][li]["frames"]
+                         [fi]["strokes"][si], stroke)
+
     def save():
         state = {"layres": []}
-        for li, layer in enumerate(layers):
-            state["layers"][li]["select"] = layer.select
-            for fi, frame in enumerate(layer.frames):
-                state["layers"][li]["frames"][fi]["select"] = frame.select
-                for si, stroke in enumerate(frame.strokes):
-                    state["layers"][li]["frames"][fi]["strokes"][si] = stroke.select
 
+        def _save(state, obj):
+            state = obj.select
+        _lick(state, _save)
         return state
 
     def load(state):
-        for li, layer in enumerate(layers):
-            layer.select = state["layers"][li]["select"]
-            for fi, frame in enumerate(layer.frames):
-                frame.select = state["layers"][li]["frames"][fi]["select"]
-                for si, stroke in enumerate(frame.strokes):
-                    stroke.select = state["layers"][li]["frames"][fi]["strokes"][si]
-
-        return 0
-    
-    def apply(func,state):
-        for li, layer in enumerate(layers):
-
-            if state["layers"][li]["select"]:
-                for fi, frame in enumerate(layer.frames):
-                    if state["layers"][li]["frames"][fi]["select"]:
-                        for si, stroke in enumerate(frame.strokes):
-                            if state["layers"][li]["frames"][fi]["strokes"][si]:
-                                func()
-
-        return 0
+        def _load(state, obj):
+            obj.select = state
+        _lick(state, _load)
 
     def deselect_all():
-        for li, layer in enumerate(layers):
-            layer.select = False
-            for fi, frame in enumerate(layer.frames):
-                frame.select = False
-                for si, stroke in enumerate(frame.strokes):
-                    frame.select = False
-        return 0
+        state = {"layres": []}
+
+        def _deselect(state, obj):
+            obj.select = False
+        _lick(state, _deselect)
 
 
 # アドオン用のいろいろ
