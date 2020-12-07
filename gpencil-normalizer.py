@@ -56,9 +56,8 @@ def get_max_count_by_selected_frames(counts: [int], select_frame_indexs: [bool])
             max_count = count
     return max_count
 
+
 # ストロークをポイント数でサンプリングする
-
-
 def stroke_count_resampler(gp_stroke: bpy.types.GPencilStroke, result_count: int) -> (int, float, int, int):
     # 長さとポイント数を計算
     src_length, src_count = calc_stroke_length_and_point(gp_stroke)
@@ -90,6 +89,8 @@ def get_strokes_select_state(gp_strokes: bpy.types.GPencilStrokes):
 def get_strokes_select_state_by_frames(gp_frames: bpy.types.GPencilFrames) -> ([[bool]]):
     return [get_strokes_select_state(frame.strokes) for frame in gp_frames]
 
+# この機能いるか？
+
 
 def get_select_state(gp_data: bpy.types.GreasePencil):
     layers = gp_data.layers
@@ -99,6 +100,52 @@ def get_select_state(gp_data: bpy.types.GreasePencil):
     stroke_state = [get_strokes_select_state_by_frames(
         layer.frames) for layer in layers]  # [l[f[s:bool,,],,],,]
     return layer_state, frame_state, stroke_state
+
+
+def gp_select_state(gp_data: bpy.types.GreasePencil):
+    layers = gp_data.layers
+
+    def save():
+        state = {"layres": []}
+        for li, layer in enumerate(layers):
+            state["layers"][li]["select"] = layer.select
+            for fi, frame in enumerate(layer.frames):
+                state["layers"][li]["frames"][fi]["select"] = frame.select
+                for si, stroke in enumerate(frame.strokes):
+                    state["layers"][li]["frames"][fi]["strokes"][si] = stroke.select
+
+        return state
+
+    def load(state):
+        for li, layer in enumerate(layers):
+            layer.select = state["layers"][li]["select"]
+            for fi, frame in enumerate(layer.frames):
+                frame.select = state["layers"][li]["frames"][fi]["select"]
+                for si, stroke in enumerate(frame.strokes):
+                    stroke.select = state["layers"][li]["frames"][fi]["strokes"][si]
+
+        return 0
+    
+    def apply(func,state):
+        for li, layer in enumerate(layers):
+
+            if state["layers"][li]["select"]:
+                for fi, frame in enumerate(layer.frames):
+                    if state["layers"][li]["frames"][fi]["select"]:
+                        for si, stroke in enumerate(frame.strokes):
+                            if state["layers"][li]["frames"][fi]["strokes"][si]:
+                                func()
+
+        return 0
+
+    def deselect_all():
+        for li, layer in enumerate(layers):
+            layer.select = False
+            for fi, frame in enumerate(layer.frames):
+                frame.select = False
+                for si, stroke in enumerate(frame.strokes):
+                    frame.select = False
+        return 0
 
 
 # アドオン用のいろいろ
