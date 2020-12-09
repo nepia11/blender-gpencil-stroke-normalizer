@@ -4,6 +4,13 @@ from bpy.types import Operator
 import bpy
 import numpy as np
 
+DEBUG = True
+
+
+def debug_print(*args):
+    if DEBUG == True:
+        print(*args)
+
 
 # 2つのベクトルから長さ(ノルム?)を求める。わからなくなるのでラップしてる
 def calc_vector3_length(a: "Vector3", b: "Vector3") -> float:
@@ -33,12 +40,12 @@ def calc_frames_stroke_length_and_count(gp_frames: bpy.types.GPencilFrames, stro
     counts: [int] = [0] * len(gp_frames)
 
     for i, frame in enumerate(gp_frames):
-        print("frame ", i, "stroke", strokes_index)
+        debug_print("frame ", i, "stroke", strokes_index)
         stroke_length, count = calc_stroke_length_and_point(
             frame.strokes[strokes_index])
         lengths[i] = stroke_length
         counts[i] = count
-        print(stroke_length, count)
+        debug_print(stroke_length, count)
         if count > point_max_count:
             point_max_count = count
 
@@ -64,8 +71,8 @@ def stroke_count_resampler(gp_stroke: bpy.types.GPencilStroke, result_count: int
     # サンプリングレートを決定
     sample_length = src_length / (result_count-1)
     # 適当なオフセットをつける 意味なかったかも
-    # offset = sample_length / (result_count*2)
-    # sample_length = sample_length + offset
+    offset = sample_length / (result_count*2)
+    sample_length = sample_length + offset
     # サンプリング実行
     gp_stroke.select = True
     bpy.ops.gpencil.stroke_sample(length=sample_length)
@@ -102,37 +109,59 @@ def stroke_count_resampler(gp_stroke: bpy.types.GPencilStroke, result_count: int
 #     return layer_state, frame_state, stroke_state
 
 
-def gp_select_state(gp_data: bpy.types.GreasePencil):
-    layers = gp_data.layers
+class GpSelectState:
+    def __init__(self, gp_data: bpy.types.GreasePencil):
+        self.layers = gp_data.layers
+        self.state = {}
 
-    def _lick(state, func):
-        for li, layer in enumerate(layers):
-            func(state["layers"][li]["select"], layer)
+    def _lick(self, state, func):
+        for li, layer in enumerate(self.layers):
+            func(state["layers"][li], layer)
             for fi, frame in enumerate(layer.frames):
-                func(state["layers"][li]["frames"][fi]["select"], frame)
+                func(state["layers"][li]["frames"][fi], frame)
                 for si, stroke in enumerate(frame.strokes):
                     func(state["layers"][li]["frames"]
                          [fi]["strokes"][si], stroke)
 
-    def save():
-        state = {"layres": []}
+    def save(self) -> "state":
+        state = {"layers": [{"select": False}]*len(self.layers)}
 
         def _save(state, obj):
-            state = obj.select
-        _lick(state, _save)
+            debug_print(state, obj)
+            obj_type = type(obj)
+            if obj_type is bpy.types.GPencilLayer:
+                state["frames"] = [{}]*len(obj.frames)
+            elif obj_type is bpy.types.GPencilFrame:
+                state["strokes"] = [{}]*len(obj.strokes)
+            state["select"] = obj.select
+
+        self._lick(state, _save)
+        self.state = state
         return state
 
-    def load(state):
+    def load(self):
         def _load(state, obj):
-            obj.select = state
-        _lick(state, _load)
+            obj.select = state["select"]
+        self._lick(self.state, _load)
 
-    def deselect_all():
-        state = {"layres": []}
+    def deselect_all(self):
 
         def _deselect(state, obj):
             obj.select = False
-        _lick(state, _deselect)
+        self._lick(self.state, _deselect)
+
+    def apply(self, result_count):
+        debug_print(self.state)
+        def _apply(state, obj):
+            _type = type(obj)
+            is_type = _type is bpy.types.GPencilStroke
+            debug_print("state select", state["select"], _type, is_type)
+            if state["select"] and is_type:
+                debug_print("exec")
+                obj.select = True
+                stroke_count_resampler(obj, result_count)
+                obj.select = False
+        self._lick(self.state, _apply)
 
 
 # アドオン用のいろいろ
@@ -162,32 +191,23 @@ class NP_GPN_OT_GPencilStrokeCountResampler(bpy.types.Operator):
         name="ポイント数",
         description="ポイント数を設定します",
         default=100,
+        min=0
     )
 
     # メニューを実行したときに呼ばれるメソッド
     def execute(self, context):
-
-        def _command(gp_stroke):
-            src_count, src_length, dst_count, _result_count = stroke_count_resampler(
-                gp_stroke, result_count)
-
-            self.report(
-                {'INFO'}, "resampled:src_count:{}, src_length:{}, dst_count:{},res_count:{}".format(
-                    src_count, src_length, dst_count, _result_count)
-            )
         # bpy.context.active_object.data = bpy.data.grease_pencils['Stroke']
         gp_data = context.active_object.data
         result_count = self.amount
 
-        layer_state, frame_state, stroke_state = get_select_state(gp_data)
+        select_state = GpSelectState(gp_data)
+        state = select_state.save()
+        # select_state.deselect_all()
+        # select_state.apply(result_count)
+        select_state.load()
 
-        for li, layer in enumerate(gp_data.layers):
-            if layer_state[li]:
-                for fi, frame in enumerate(layer.frames):
-                    if frame_state[li][fi]:
-                        for si, stroke in enumerate(frame.strokes):
-                            if stroke_state[li][fi][si]:
-                                _command(stroke)
+        self.report(
+            {'INFO'}, "done stroke resample")
 
         return {'FINISHED'}
 
