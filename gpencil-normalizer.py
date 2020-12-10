@@ -3,6 +3,9 @@ from bpy.types import Operator
 
 import bpy
 import numpy as np
+import pprint
+import random
+import string
 
 DEBUG = True
 
@@ -10,6 +13,10 @@ DEBUG = True
 def debug_print(*args):
     if DEBUG == True:
         print(*args)
+
+
+def random_name(n):
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=n))
 
 
 # 2つのベクトルから長さ(ノルム?)を求める。わからなくなるのでラップしてる
@@ -71,7 +78,7 @@ def stroke_count_resampler(gp_stroke: bpy.types.GPencilStroke, result_count: int
     # サンプリングレートを決定
     sample_length = src_length / (result_count-1)
     # 適当なオフセットをつける 意味なかったかも
-    offset = sample_length / (result_count*2)
+    offset = sample_length / (result_count)
     sample_length = sample_length + offset
     # サンプリング実行
     gp_stroke.select = True
@@ -81,35 +88,41 @@ def stroke_count_resampler(gp_stroke: bpy.types.GPencilStroke, result_count: int
     return src_count, src_length, dst_count, result_count
 
 
-# def get_layers_select_state(gp_data: bpy.types.GreasePencil) -> [bool]:
-#     return [layer.select for layer in gp_data.layers]
+"""
+def get_layers_select_state(gp_data: bpy.types.GreasePencil) -> [bool]:
+    return [layer.select for layer in gp_data.layers]
 
 
-# def get_frames_select_state(gp_frames: bpy.types.GPencilFrames) -> [bool]:
-#     return [frame.select for frame in gp_frames]
+def get_frames_select_state(gp_frames: bpy.types.GPencilFrames) -> [bool]:
+    return [frame.select for frame in gp_frames]
 
 
-# def get_strokes_select_state(gp_strokes: bpy.types.GPencilStrokes):
-#     return [stroke.select for stroke in gp_strokes]
+def get_strokes_select_state(gp_strokes: bpy.types.GPencilStrokes):
+    return [stroke.select for stroke in gp_strokes]
 
 
-# def get_strokes_select_state_by_frames(gp_frames: bpy.types.GPencilFrames) -> ([[bool]]):
-#     return [get_strokes_select_state(frame.strokes) for frame in gp_frames]
+def get_strokes_select_state_by_frames(gp_frames: bpy.types.GPencilFrames) -> ([[bool]]):
+    return [get_strokes_select_state(frame.strokes) for frame in gp_frames]
 
-# この機能いるか？
+この機能いるか？
 
 
-# def get_select_state(gp_data: bpy.types.GreasePencil):
-#     layers = gp_data.layers
-#     layer_state = get_layers_select_state(gp_data)
-#     # [layer0[bool,bool],layre1[,,,]]
-#     frame_state = [get_frames_select_state(layer.frames) for layer in layers]
-#     stroke_state = [get_strokes_select_state_by_frames(
-#         layer.frames) for layer in layers]  # [l[f[s:bool,,],,],,]
-#     return layer_state, frame_state, stroke_state
+def get_select_state(gp_data: bpy.types.GreasePencil):
+    layers = gp_data.layers
+    layer_state = get_layers_select_state(gp_data)
+    # [layer0[bool,bool],layre1[,,,]]
+    frame_state = [get_frames_select_state(layer.frames) for layer in layers]
+    stroke_state = [get_strokes_select_state_by_frames(
+        layer.frames) for layer in layers]  # [l[f[s:bool,,],,],,]
+    return layer_state, frame_state, stroke_state
+"""
 
 
 class GpSelectState:
+    """
+    選択状態を保持したり、読み込んだりしてくれる君
+    """
+
     def __init__(self, gp_data: bpy.types.GreasePencil):
         self.layers = gp_data.layers
         self.state = {}
@@ -124,22 +137,37 @@ class GpSelectState:
                          [fi]["strokes"][si], stroke)
 
     def save(self) -> "state":
-        state = {"layers": [{"select": False}]*len(self.layers)}
+        # state = {"layers": [{"select": False}]*len(self.layers)}
+        state = {"layers": [{"select": False}
+                            for i in range(len(self.layers))]}
+        # 現在のフレームを保存しておく
+        state["frame_current"] = bpy.context.scene.frame_current
 
         def _save(state, obj):
-            debug_print(state, obj)
+            debug_print("## start _save()")
+            debug_print("state,obj", state, obj)
             obj_type = type(obj)
             if obj_type is bpy.types.GPencilLayer:
-                state["frames"] = [{}]*len(obj.frames)
+                debug_print("### init state[frames]")
+                state["frames"] = [{} for i in range(len(obj.frames))]
             elif obj_type is bpy.types.GPencilFrame:
-                state["strokes"] = [{}]*len(obj.strokes)
-            state["select"] = obj.select
+                debug_print("### init state[strokes]")
+                state["strokes"] = [{} for i in range(len(obj.strokes))]
+                state["frame_number"] = obj.frame_number
 
+            state["select"] = obj.select
+            state["tag"] = random_name(8)
+            debug_print("### state[select]:", state, obj.select)
+
+        debug_print("# start save() loop")
         self._lick(state, _save)
         self.state = state
+        debug_print("# end state")
+        # pprint.pprint(self.state)
         return state
 
     def load(self):
+        bpy.context.scene.frame_current = self.state["frame_current"]
         def _load(state, obj):
             obj.select = state["select"]
         self._lick(self.state, _load)
@@ -152,12 +180,15 @@ class GpSelectState:
 
     def apply(self, result_count):
         debug_print(self.state)
+
         def _apply(state, obj):
             _type = type(obj)
-            is_type = _type is bpy.types.GPencilStroke
-            debug_print("state select", state["select"], _type, is_type)
-            if state["select"] and is_type:
-                debug_print("exec")
+            is_stroke = _type is bpy.types.GPencilStroke
+            is_valid = state["select"] and is_stroke
+            # debug_print("state select", state["select"], _type, is_type)
+            if _type is bpy.types.GPencilFrame:
+                bpy.context.scene.frame_current = state["frame_number"]
+            if is_valid:
                 obj.select = True
                 stroke_count_resampler(obj, result_count)
                 obj.select = False
@@ -202,8 +233,8 @@ class NP_GPN_OT_GPencilStrokeCountResampler(bpy.types.Operator):
 
         select_state = GpSelectState(gp_data)
         state = select_state.save()
-        # select_state.deselect_all()
-        # select_state.apply(result_count)
+        select_state.deselect_all()
+        select_state.apply(result_count)
         select_state.load()
 
         self.report(
