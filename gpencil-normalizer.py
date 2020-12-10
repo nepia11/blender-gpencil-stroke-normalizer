@@ -265,19 +265,19 @@ class NP_GPN_OT_GPencilStrokeCountNormalizer(bpy.types.Operator):
         state1 = select_state.save()
         select_state.deselect_all()
 
-        for li,layer in enumerate(select_state.layers):
+        for li, layer in enumerate(select_state.layers):
             max_counts = state1["layers"][li]["max_counts"]
-            for fi,frame in enumerate(layer.frames):
+            for fi, frame in enumerate(layer.frames):
                 frame_number = state1["layers"][li]["frames"][fi]["frame_number"]
                 bpy.context.scene.frame_current = frame_number
-                for si,stroke in enumerate(frame.strokes):
+                for si, stroke in enumerate(frame.strokes):
                     stroke.select = True
-                    debug_print("## max,si",max_counts,si)
-                    stroke_count_resampler(stroke,result_count=max_counts[si])
+                    debug_print("## max,si", max_counts, si)
+                    stroke_count_resampler(stroke, result_count=max_counts[si])
                     stroke.select = False
 
         # bpy.context.scene.frame_current = select_state.state["frame_current"]
-        
+
         select_state.load()
 
         self.report(
