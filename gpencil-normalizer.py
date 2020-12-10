@@ -172,8 +172,8 @@ class GpSelectState:
 bl_info = {
     "name": "gpencil normalizer",
     "author": "nepia",
-    "version": (0, 1),
-    "blender": (2, 80, 0),
+    "version": (0, 2, 1),
+    "blender": (2, 83, 0),
     "location": "3Dビューポート > 編集モード",
     "description": "gpencilのストロークのポイント数をフレーム間の最大値にリサンプルする",
     "warning": "",
