@@ -1,4 +1,4 @@
-from bpy.props import FloatProperty, IntProperty, EnumProperty
+from bpy.props import IntProperty
 from bpy.types import Operator
 
 import bpy
@@ -8,6 +8,8 @@ import random
 import string
 
 DEBUG = False
+
+# loggingとか使ったほうがいいと思う
 
 
 def debug_print(*args):
@@ -48,13 +50,20 @@ def count_stroke_points(gp_stroke: bpy.types.GPencilStroke) -> int:
 # フレーム間の各ストロークのポイント最大数を返す
 def calc_frames_strokes_max_count(gp_frames: bpy.types.GPencilFrames) -> ([int]):
     frames_counts = [0]*len(gp_frames)
+    length = 0
     for i, frame in enumerate(gp_frames):
-        counts = [count_stroke_points(stroke) for stroke in frame.strokes]
-        frames_counts[i] = counts
-
+        counts = [count_stroke_points(stroke) for stroke in frame.strokes] # [int,int,,,]
+        frames_counts[i] = counts # [[counts],[],]
+        counts_len = len(counts)
+        if length < counts_len:
+            length = counts_len
+    # padding
+    for counts in frames_counts:
+        counts += [0] * (length - len(counts))
     np_counts = np.array(frames_counts)
     results_max = np.max(np_counts, axis=0)
     pprint.pprint(np_counts)
+    pprint.pprint(results_max)
 
     return results_max
     """
@@ -151,6 +160,7 @@ class GpSelectState:
             obj.select = False
         self._lick(self.state, _deselect)
 
+    # この機能はこいつの責務なのか？
     def apply(self, result_count):
         debug_print(self.state)
 
@@ -168,21 +178,6 @@ class GpSelectState:
         self._lick(self.state, _apply)
 
 
-# アドオン用のいろいろ
-bl_info = {
-    "name": "gpencil normalizer",
-    "author": "nepia",
-    "version": (0, 2, 1),
-    "blender": (2, 83, 0),
-    "location": "3Dビューポート > 編集モード",
-    "description": "gpencilのストロークのポイント数をフレーム間の最大値にリサンプルする",
-    "warning": "",
-    "support": "TESTING",
-    "wiki_url": "",
-    "tracker_url": "",
-    "category": "Gpencil"
-}
-
 # 翻訳用の辞書
 # bpy.app.translations.pgettext("Template")
 translation_dict = {
@@ -193,10 +188,6 @@ translation_dict = {
         ("*", "number of points"): "number of points",
         ("*", "Normalize stroke"): "Normalize stroke",
         ("*", "Normalize stroke description"): "Match the maximum number of points for the same stroke between frames.",
-
-
-
-
     },
     "ja_JP": {
         # ("*", "Template"): "テンプレート",
@@ -205,13 +196,24 @@ translation_dict = {
         ("*", "number of points"): "ポイント数",
         ("*", "Normalize stroke"): "ストロークを正規化",
         ("*", "Normalize stroke description"): "フレーム間、同一ストロークのポイント数を最大値に合わせる",
-
-
     }
 }
-
-
 translation = bpy.app.translations.pgettext
+
+# アドオン用のいろいろ
+bl_info = {
+    "name": "gpencil normalizer",
+    "author": "nepia",
+    "version": (0, 2, 2),
+    "blender": (2, 83, 0),
+    "location":  "bpy.types.VIEW3D_PT_tools_grease_pencil_interpolate",
+    "description": "gpencilのストロークのポイント数をフレーム間の最大値にリサンプルする",
+    "warning": "",
+    "support": "TESTING",
+    "wiki_url": "",
+    "tracker_url": "https://github.com/nepia11/blender-gpencil-stroke-normalizer/issues",
+    "category": "Gpencil"
+}
 
 
 class NP_GPN_OT_GPencilStrokeCountResampler(bpy.types.Operator):
@@ -259,7 +261,6 @@ class NP_GPN_OT_GPencilStrokeCountNormalizer(bpy.types.Operator):
     def execute(self, context):
         # bpy.context.active_object.data = bpy.data.grease_pencils['Stroke']
         gp_data = context.active_object.data
-        result_count = 100
 
         select_state = GpSelectState(gp_data)
         state1 = select_state.save()
@@ -267,14 +268,17 @@ class NP_GPN_OT_GPencilStrokeCountNormalizer(bpy.types.Operator):
 
         for li, layer in enumerate(select_state.layers):
             max_counts = state1["layers"][li]["max_counts"]
-            for fi, frame in enumerate(layer.frames):
-                frame_number = state1["layers"][li]["frames"][fi]["frame_number"]
-                bpy.context.scene.frame_current = frame_number
-                for si, stroke in enumerate(frame.strokes):
-                    stroke.select = True
-                    debug_print("## max,si", max_counts, si)
-                    stroke_count_resampler(stroke, result_count=max_counts[si])
-                    stroke.select = False
+            # 選択レイヤーだけ処理したいので
+            if state1["layers"][li]["select"] == True:
+                for fi, frame in enumerate(layer.frames):
+                    frame_number = state1["layers"][li]["frames"][fi]["frame_number"]
+                    bpy.context.scene.frame_current = frame_number
+                    for si, stroke in enumerate(frame.strokes):
+                        stroke.select = True
+                        debug_print("## max,si", max_counts, si)
+                        stroke_count_resampler(
+                            stroke, result_count=max_counts[si])
+                        stroke.select = False
 
         # bpy.context.scene.frame_current = select_state.state["frame_current"]
 
@@ -301,7 +305,8 @@ classes = [
 def register():
     for c in classes:
         bpy.utils.register_class(c)
-    bpy.types.VIEW3D_MT_gpencil_edit_context_menu.append(menu_fn)
+    # bpy.types.VIEW3D_MT_gpencil_edit_context_menu.append(menu_fn)
+    bpy.types.VIEW3D_PT_tools_grease_pencil_interpolate.append(menu_fn)
 
     # 翻訳辞書の登録
     bpy.app.translations.register(__name__, translation_dict)
@@ -311,7 +316,8 @@ def unregister():
     # 翻訳辞書の登録解除
     bpy.app.translations.unregister(__name__)
 
-    bpy.types.VIEW3D_MT_gpencil_edit_context_menu.remove(menu_fn)
+    # bpy.types.VIEW3D_MT_gpencil_edit_context_menu.remove(menu_fn)
+    bpy.types.VIEW3D_PT_tools_grease_pencil_interpolate.remove(menu_fn)
     for c in classes:
         bpy.utils.unregister_class(c)
 
