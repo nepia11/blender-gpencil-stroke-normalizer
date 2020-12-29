@@ -31,13 +31,9 @@ def calc_vector3_length(a: "Vector3", b: "Vector3") -> float:
 def calc_stroke_length_and_point(gp_stroke: bpy.types.GPencilStroke) -> (float, int):
     vectors = [p.co for p in gp_stroke.points]
     point_count: int = len(vectors)
-    norms = np.zeros(point_count, dtype="float64")
-    for index in range(point_count-1):
-        vec_length = calc_vector3_length(vectors[index], vectors[index+1])
-        norms[index] = vec_length
-
-    length = np.sum(norms, dtype="float64")
-
+    norms = [calc_vector3_length(vectors[i], vectors[i+1])
+             for i in range(point_count-1)]
+    length = sum(norms)
     return length, point_count
 
 
@@ -83,9 +79,9 @@ def calc_frames_strokes_max_count(gp_frames: bpy.types.GPencilFrames) -> ([int])
 def calc_offset(src_length: float, segment_length: float, point_count: int) -> float:
     # 演算誤差をチェックしたい
     FACTOR = 1.5
-    result = sum([segment_length] * point_count)
-    addition_error = src_length - result
-    offset = (addition_error / point_count) * FACTOR
+    total_error = sum([segment_length] * point_count)
+    segment_error = src_length - total_error
+    offset = (segment_error / point_count) * FACTOR
     return offset
 
 
@@ -96,8 +92,8 @@ def stroke_count_resampler(gp_stroke: bpy.types.GPencilStroke, result_count: int
     # サンプリングレートを決定
     sample_length = src_length / (result_count)
     # 適当なオフセットをつける 意味なかったかも
-    offset = calc_offset(src_length,sample_length,result_count)
-    sample_length = sample_length + offset
+    offset = calc_offset(src_length, sample_length, result_count)
+    sample_length = offset + sample_length
     # サンプリング実行
     gp_stroke.select = True
     bpy.ops.gpencil.stroke_sample(length=sample_length)
