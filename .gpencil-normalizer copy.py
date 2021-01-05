@@ -1,19 +1,16 @@
-from bpy.props import IntProperty
-from bpy.types import Operator
-
-import bpy
-import numpy as np
+from .translation import translation_dict
 import pprint
 import random
 import string
 
-DEBUG = False
+import numpy as np
+from bpy import ops, props, types, context, app, utils
 
-# loggingとか使ったほうがいいと思う
+DEBUG = False
 
 
 def debug_print(*args):
-    if DEBUG == True:
+    if DEBUG:
         print(*args)
 
 
@@ -21,31 +18,33 @@ def random_name(n: int) -> string:
     return "".join(random.choices(string.ascii_letters + string.digits, k=n))
 
 
-# 2つのベクトルから長さ(ノルム?)を求める。わからなくなるのでラップしてる
-def calc_vector3_length(a: "Vector3", b: "Vector3") -> float:
-    vec = np.array(b - a, dtype="float64")
-    return np.linalg.norm(vec)
+# 2つのベクトルから長さを求める
+def calc_vector_length(
+        a: types.mathutils.Vector, b: types.mathutils.Vector) -> float:
+    vec = b-a
+    return vec.length
 
 
 # ストロークの長さとポイント数を計算して返す これ分解したほうが良いかもな
-def calc_stroke_length_and_point(gp_stroke: bpy.types.GPencilStroke) -> (float, int):
+def calc_stroke_length_and_point(gp_stroke: types.GPencilStroke) -> (float, int):
     vectors = [p.co for p in gp_stroke.points]
     point_count: int = len(vectors)
     norms = [
-        calc_vector3_length(vectors[i], vectors[i + 1]) for i in range(point_count - 1)
+        calc_vector_length(
+            vectors[i], vectors[i + 1]
+        ) for i in range(point_count - 1)
     ]
     length = sum(norms)
     return length, point_count
 
 
-def count_stroke_points(gp_stroke: bpy.types.GPencilStroke) -> int:
-    vectors = [p.co for p in gp_stroke.points]
-    point_count: int = len(vectors)
+def count_stroke_points(gp_stroke: types.GPencilStroke) -> int:
+    point_count: int = len(gp_stroke.points)
     return point_count
 
 
 # フレーム間の各ストロークのポイント最大数を返す
-def calc_frames_strokes_max_count(gp_frames: bpy.types.GPencilFrames) -> ([int]):
+def calc_frames_strokes_max_count(gp_frames: types.GPencilFrames) -> ([int]):
     frames_counts = [0] * len(gp_frames)
     length = 0
     for i, frame in enumerate(gp_frames):
@@ -78,18 +77,18 @@ def calc_frames_strokes_max_count(gp_frames: bpy.types.GPencilFrames) -> ([int])
     """
 
 
-def calc_offset(src_length: float, segment_length: float, point_count: int) -> float:
+def calc_offset(src_len: float, segment_len: float, point_count: int) -> float:
     # 演算誤差をチェックしたい
     FACTOR = 1.5
-    total_error = sum([segment_length] * point_count)
-    segment_error = src_length - total_error
+    total_error = sum([segment_len] * point_count)
+    segment_error = src_len - total_error
     offset = (segment_error / point_count) * FACTOR
     return offset
 
 
 # ストロークをポイント数でサンプリングする
 def stroke_count_resampler(
-    gp_stroke: bpy.types.GPencilStroke, result_count: int
+    gp_stroke: types.GPencilStroke, result_count: int
 ) -> (int, float, int, int):
     # 単純にresult_countで割るとポイント数に1,2程度の誤差が起きるのでオフセット値をつける
     # 1.5でうまく行くことはわかったけど理由がわからない　ほんとに何？？？
@@ -100,8 +99,9 @@ def stroke_count_resampler(
     sample_length = src_length / (result_count - OFFSET)
     # サンプリング実行
     gp_stroke.select = True
-    bpy.ops.gpencil.stroke_sample(length=sample_length)
+    ops.gpencil.stroke_sample(length=sample_length)
 
+    # 結果を確認するとき用
     dst_count = len(gp_stroke.points)
     return src_count, src_length, dst_count, result_count
 
@@ -111,7 +111,7 @@ class GpSelectState:
     選択状態を保持したり、読み込んだりしてくれる君
     """
 
-    def __init__(self, gp_data: bpy.types.GreasePencil):
+    def __init__(self, gp_data: types.GreasePencil):
         self.layers = gp_data.layers
         self.state = {}
 
@@ -121,25 +121,27 @@ class GpSelectState:
             for fi, frame in enumerate(layer.frames):
                 func(state["layers"][li]["frames"][fi], frame)
                 for si, stroke in enumerate(frame.strokes):
-                    func(state["layers"][li]["frames"][fi]["strokes"][si], stroke)
+                    func(state["layers"][li]["frames"]
+                         [fi]["strokes"][si], stroke)
 
-    def save(self) -> "state":
+    def save(self) -> dict:
         # state = {"layers": [{"select": False}]*len(self.layers)}
-        state = {"layers": [{"select": False} for i in range(len(self.layers))]}
+        state = {"layers": [{"select": False}
+                            for i in range(len(self.layers))]}
         # 現在のフレームを保存しておく
-        state["frame_current"] = bpy.context.scene.frame_current
+        state["frame_current"] = context.scene.frame_current
 
         def _save(state, obj):
             debug_print("## start _save()")
             debug_print("state,obj", state, obj)
             obj_type = type(obj)
-            if obj_type is bpy.types.GPencilLayer:
+            if obj_type is types.GPencilLayer:
                 debug_print("### init state[frames]")
                 state["frames"] = [{} for i in range(len(obj.frames))]
                 max_counts = calc_frames_strokes_max_count(obj.frames)
                 state["max_counts"] = max_counts
 
-            elif obj_type is bpy.types.GPencilFrame:
+            elif obj_type is types.GPencilFrame:
                 debug_print("### init state[strokes]")
                 state["strokes"] = [{} for i in range(len(obj.strokes))]
                 state["frame_number"] = obj.frame_number
@@ -156,7 +158,7 @@ class GpSelectState:
         return state
 
     def load(self):
-        bpy.context.scene.frame_current = self.state["frame_current"]
+        context.scene.frame_current = self.state["frame_current"]
 
         def _load(state, obj):
             obj.select = state["select"]
@@ -175,11 +177,11 @@ class GpSelectState:
 
         def _apply(state, obj):
             _type = type(obj)
-            is_stroke = _type is bpy.types.GPencilStroke
+            is_stroke = _type is types.GPencilStroke
             is_valid = state["select"] and is_stroke
             # debug_print("state select", state["select"], _type, is_type)
-            if _type is bpy.types.GPencilFrame:
-                bpy.context.scene.frame_current = state["frame_number"]
+            if _type is types.GPencilFrame:
+                context.scene.frame_current = state["frame_number"]
             if is_valid:
                 obj.select = True
                 stroke_count_resampler(obj, result_count)
@@ -193,67 +195,45 @@ class GpSelectState:
 #################################################################
 
 # 翻訳用の辞書
-# bpy.app.translations.pgettext("Template")
-translation_dict = {
-    "en_US": {
-        # ("*", "Template"): "Template",
-        (
-            "*",
-            "Sampling selection strokes by number of points",
-        ): "Sampling selection strokes by number of points",
-        ("*", "Sampling strokes"): "Sampling strokes",
-        ("*", "number of points"): "number of points",
-        ("*", "Normalize stroke"): "Normalize stroke",
-        (
-            "*",
-            "Normalize stroke description",
-        ): "Match the maximum number of points for the same stroke between frames.",
-    },
-    "ja_JP": {
-        # ("*", "Template"): "テンプレート",
-        (
-            "*",
-            "Sampling selection strokes by number of points",
-        ): "選択ストロークをポイント数でサンプリングする",
-        ("*", "Sampling strokes"): "ストロークをサンプリング",
-        ("*", "number of points"): "ポイント数",
-        ("*", "Normalize stroke"): "ストロークを正規化",
-        ("*", "Normalize stroke description"): "フレーム間、同一ストロークのポイント数を最大値に合わせる",
-    },
-}
-translation = bpy.app.translations.pgettext
+# app.translations.pgettext("Template")
+translation = app.translations.pgettext
 
 # アドオン用のいろいろ
 bl_info = {
     "name": "gpencil normalizer",
     "author": "nepia",
-    "version": (0, 2, 2),
+    "version": (0, 3, 0),
     "blender": (2, 83, 0),
-    "location": "bpy.types.VIEW3D_PT_tools_grease_pencil_interpolate",
+    "location": "types.VIEW3D_PT_tools_grease_pencil_interpolate",
     "description": "gpencilのストロークのポイント数をフレーム間の最大値にリサンプルする",
     "warning": "",
     "support": "TESTING",
     "wiki_url": "",
-    "tracker_url": "https://github.com/nepia11/blender-gpencil-stroke-normalizer/issues",
+    "tracker_url":
+        "https://github.com/nepia11/blender-gpencil-stroke-normalizer/issues",
     "category": "Gpencil",
 }
 
 
-class NP_GPN_OT_GPencilStrokeCountResampler(bpy.types.Operator):
+class NP_GPN_OT_GPencilStrokeCountResampler(types.Operator):
 
     bl_idname = "gpencil.np_gpencil_stroke_count_resampler"
     bl_label = translation("Sampling strokes")
-    bl_description = translation("Sampling selection strokes by number of points")
+    bl_description = translation(
+        "Sampling selection strokes by number of points")
 
     bl_options = {"REGISTER", "UNDO"}
 
-    amount: IntProperty(
-        name=translation("number of points"), description="", default=100, min=0
+    amount: props.IntProperty(
+        name=translation("number of points"),
+        description="",
+        default=100,
+        min=1,
     )
 
     # メニューを実行したときに呼ばれるメソッド
     def execute(self, context):
-        # bpy.context.active_object.data = bpy.data.grease_pencils['Stroke']
+        # context.active_object.data = data.grease_pencils['Stroke']
         gp_data = context.active_object.data
         result_count = self.amount
 
@@ -268,7 +248,7 @@ class NP_GPN_OT_GPencilStrokeCountResampler(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class NP_GPN_OT_GPencilStrokeCountNormalizer(bpy.types.Operator):
+class NP_GPN_OT_GPencilStrokeCountNormalizer(types.Operator):
 
     bl_idname = "gpencil.np_gpencil_stroke_count_normalizer"
     bl_label = translation("Normalize stroke")
@@ -277,7 +257,7 @@ class NP_GPN_OT_GPencilStrokeCountNormalizer(bpy.types.Operator):
 
     # メニューを実行したときに呼ばれるメソッド
     def execute(self, context):
-        # bpy.context.active_object.data = bpy.data.grease_pencils['Stroke']
+        # context.active_object.data = data.grease_pencils['Stroke']
         gp_data = context.active_object.data
 
         select_state = GpSelectState(gp_data)
@@ -287,17 +267,18 @@ class NP_GPN_OT_GPencilStrokeCountNormalizer(bpy.types.Operator):
         for li, layer in enumerate(select_state.layers):
             max_counts = state1["layers"][li]["max_counts"]
             # 選択レイヤーだけ処理したいので
-            if state1["layers"][li]["select"] == True:
+            if state1["layers"][li]["select"]:
                 for fi, frame in enumerate(layer.frames):
                     frame_number = state1["layers"][li]["frames"][fi]["frame_number"]
-                    bpy.context.scene.frame_current = frame_number
+                    context.scene.frame_current = frame_number
                     for si, stroke in enumerate(frame.strokes):
                         stroke.select = True
                         debug_print("## max,si", max_counts, si)
-                        stroke_count_resampler(stroke, result_count=max_counts[si])
+                        stroke_count_resampler(
+                            stroke, result_count=max_counts[si])
                         stroke.select = False
 
-        # bpy.context.scene.frame_current = select_state.state["frame_current"]
+        # context.scene.frame_current = select_state.state["frame_current"]
 
         select_state.load()
 
@@ -320,22 +301,22 @@ classes = [
 
 def register():
     for c in classes:
-        bpy.utils.register_class(c)
-    # bpy.types.VIEW3D_MT_gpencil_edit_context_menu.append(menu_fn)
-    bpy.types.VIEW3D_PT_tools_grease_pencil_interpolate.append(menu_fn)
+        utils.register_class(c)
+    # types.VIEW3D_MT_gpencil_edit_context_menu.append(menu_fn)
+    types.VIEW3D_PT_tools_grease_pencil_interpolate.append(menu_fn)
 
     # 翻訳辞書の登録
-    bpy.app.translations.register(__name__, translation_dict)
+    app.translations.register(__name__, translation_dict)
 
 
 def unregister():
     # 翻訳辞書の登録解除
-    bpy.app.translations.unregister(__name__)
+    app.translations.unregister(__name__)
 
-    # bpy.types.VIEW3D_MT_gpencil_edit_context_menu.remove(menu_fn)
-    bpy.types.VIEW3D_PT_tools_grease_pencil_interpolate.remove(menu_fn)
+    # types.VIEW3D_MT_gpencil_edit_context_menu.remove(menu_fn)
+    types.VIEW3D_PT_tools_grease_pencil_interpolate.remove(menu_fn)
     for c in classes:
-        bpy.utils.unregister_class(c)
+        utils.unregister_class(c)
 
 
 if __name__ == "__main__":
