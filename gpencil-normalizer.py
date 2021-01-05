@@ -17,8 +17,8 @@ def debug_print(*args):
         print(*args)
 
 
-def random_name(n):
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=n))
+def random_name(n: int) -> string:
+    return "".join(random.choices(string.ascii_letters + string.digits, k=n))
 
 
 # 2つのベクトルから長さ(ノルム?)を求める。わからなくなるのでラップしてる
@@ -31,8 +31,9 @@ def calc_vector3_length(a: "Vector3", b: "Vector3") -> float:
 def calc_stroke_length_and_point(gp_stroke: bpy.types.GPencilStroke) -> (float, int):
     vectors = [p.co for p in gp_stroke.points]
     point_count: int = len(vectors)
-    norms = [calc_vector3_length(vectors[i], vectors[i+1])
-             for i in range(point_count-1)]
+    norms = [
+        calc_vector3_length(vectors[i], vectors[i + 1]) for i in range(point_count - 1)
+    ]
     length = sum(norms)
     return length, point_count
 
@@ -45,11 +46,12 @@ def count_stroke_points(gp_stroke: bpy.types.GPencilStroke) -> int:
 
 # フレーム間の各ストロークのポイント最大数を返す
 def calc_frames_strokes_max_count(gp_frames: bpy.types.GPencilFrames) -> ([int]):
-    frames_counts = [0]*len(gp_frames)
+    frames_counts = [0] * len(gp_frames)
     length = 0
     for i, frame in enumerate(gp_frames):
-        counts = [count_stroke_points(stroke)
-                  for stroke in frame.strokes]  # [int,int,,,]
+        counts = [
+            count_stroke_points(stroke) for stroke in frame.strokes
+        ]  # [int,int,,,]
         frames_counts[i] = counts  # [[counts],[],]
         counts_len = len(counts)
         if length < counts_len:
@@ -86,14 +88,16 @@ def calc_offset(src_length: float, segment_length: float, point_count: int) -> f
 
 
 # ストロークをポイント数でサンプリングする
-def stroke_count_resampler(gp_stroke: bpy.types.GPencilStroke, result_count: int) -> (int, float, int, int):
+def stroke_count_resampler(
+    gp_stroke: bpy.types.GPencilStroke, result_count: int
+) -> (int, float, int, int):
+    # 単純にresult_countで割るとポイント数に1,2程度の誤差が起きるのでオフセット値をつける
+    # 1.5でうまく行くことはわかったけど理由がわからない　ほんとに何？？？
+    OFFSET = 1.5
     # 長さとポイント数を計算
     src_length, src_count = calc_stroke_length_and_point(gp_stroke)
     # サンプリングレートを決定
-    sample_length = src_length / (result_count)
-    # 適当なオフセットをつける 意味なかったかも
-    offset = calc_offset(src_length, sample_length, result_count)
-    sample_length = offset + sample_length
+    sample_length = src_length / (result_count - OFFSET)
     # サンプリング実行
     gp_stroke.select = True
     bpy.ops.gpencil.stroke_sample(length=sample_length)
@@ -117,13 +121,11 @@ class GpSelectState:
             for fi, frame in enumerate(layer.frames):
                 func(state["layers"][li]["frames"][fi], frame)
                 for si, stroke in enumerate(frame.strokes):
-                    func(state["layers"][li]["frames"]
-                         [fi]["strokes"][si], stroke)
+                    func(state["layers"][li]["frames"][fi]["strokes"][si], stroke)
 
     def save(self) -> "state":
         # state = {"layers": [{"select": False}]*len(self.layers)}
-        state = {"layers": [{"select": False}
-                            for i in range(len(self.layers))]}
+        state = {"layers": [{"select": False} for i in range(len(self.layers))]}
         # 現在のフレームを保存しておく
         state["frame_current"] = bpy.context.scene.frame_current
 
@@ -158,12 +160,13 @@ class GpSelectState:
 
         def _load(state, obj):
             obj.select = state["select"]
+
         self._lick(self.state, _load)
 
     def deselect_all(self):
-
         def _deselect(state, obj):
             obj.select = False
+
         self._lick(self.state, _deselect)
 
     # この機能はこいつの責務なのか？
@@ -181,28 +184,42 @@ class GpSelectState:
                 obj.select = True
                 stroke_count_resampler(obj, result_count)
                 obj.select = False
+
         self._lick(self.state, _apply)
 
+
+#################################################################
+#  以下addon設定
+#################################################################
 
 # 翻訳用の辞書
 # bpy.app.translations.pgettext("Template")
 translation_dict = {
     "en_US": {
         # ("*", "Template"): "Template",
-        ("*", "Sampling selection strokes by number of points"): "Sampling selection strokes by number of points",
+        (
+            "*",
+            "Sampling selection strokes by number of points",
+        ): "Sampling selection strokes by number of points",
         ("*", "Sampling strokes"): "Sampling strokes",
         ("*", "number of points"): "number of points",
         ("*", "Normalize stroke"): "Normalize stroke",
-        ("*", "Normalize stroke description"): "Match the maximum number of points for the same stroke between frames.",
+        (
+            "*",
+            "Normalize stroke description",
+        ): "Match the maximum number of points for the same stroke between frames.",
     },
     "ja_JP": {
         # ("*", "Template"): "テンプレート",
-        ("*", "Sampling selection strokes by number of points"): "選択ストロークをポイント数でサンプリングする",
+        (
+            "*",
+            "Sampling selection strokes by number of points",
+        ): "選択ストロークをポイント数でサンプリングする",
         ("*", "Sampling strokes"): "ストロークをサンプリング",
         ("*", "number of points"): "ポイント数",
         ("*", "Normalize stroke"): "ストロークを正規化",
         ("*", "Normalize stroke description"): "フレーム間、同一ストロークのポイント数を最大値に合わせる",
-    }
+    },
 }
 translation = bpy.app.translations.pgettext
 
@@ -212,13 +229,13 @@ bl_info = {
     "author": "nepia",
     "version": (0, 2, 2),
     "blender": (2, 83, 0),
-    "location":  "bpy.types.VIEW3D_PT_tools_grease_pencil_interpolate",
+    "location": "bpy.types.VIEW3D_PT_tools_grease_pencil_interpolate",
     "description": "gpencilのストロークのポイント数をフレーム間の最大値にリサンプルする",
     "warning": "",
     "support": "TESTING",
     "wiki_url": "",
     "tracker_url": "https://github.com/nepia11/blender-gpencil-stroke-normalizer/issues",
-    "category": "Gpencil"
+    "category": "Gpencil",
 }
 
 
@@ -226,16 +243,12 @@ class NP_GPN_OT_GPencilStrokeCountResampler(bpy.types.Operator):
 
     bl_idname = "gpencil.np_gpencil_stroke_count_resampler"
     bl_label = translation("Sampling strokes")
-    bl_description = translation(
-        "Sampling selection strokes by number of points")
+    bl_description = translation("Sampling selection strokes by number of points")
 
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     amount: IntProperty(
-        name=translation("number of points"),
-        description="",
-        default=100,
-        min=0
+        name=translation("number of points"), description="", default=100, min=0
     )
 
     # メニューを実行したときに呼ばれるメソッド
@@ -250,10 +263,9 @@ class NP_GPN_OT_GPencilStrokeCountResampler(bpy.types.Operator):
         select_state.apply(result_count)
         select_state.load()
 
-        self.report(
-            {'INFO'}, "done stroke resample")
+        self.report({"INFO"}, "done stroke resample")
 
-        return {'FINISHED'}
+        return {"FINISHED"}
 
 
 class NP_GPN_OT_GPencilStrokeCountNormalizer(bpy.types.Operator):
@@ -261,7 +273,7 @@ class NP_GPN_OT_GPencilStrokeCountNormalizer(bpy.types.Operator):
     bl_idname = "gpencil.np_gpencil_stroke_count_normalizer"
     bl_label = translation("Normalize stroke")
     bl_description = translation("Normalize stroke description")
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     # メニューを実行したときに呼ばれるメソッド
     def execute(self, context):
@@ -282,18 +294,16 @@ class NP_GPN_OT_GPencilStrokeCountNormalizer(bpy.types.Operator):
                     for si, stroke in enumerate(frame.strokes):
                         stroke.select = True
                         debug_print("## max,si", max_counts, si)
-                        stroke_count_resampler(
-                            stroke, result_count=max_counts[si])
+                        stroke_count_resampler(stroke, result_count=max_counts[si])
                         stroke.select = False
 
         # bpy.context.scene.frame_current = select_state.state["frame_current"]
 
         select_state.load()
 
-        self.report(
-            {'INFO'}, "done stroke resample")
+        self.report({"INFO"}, "done stroke resample")
 
-        return {'FINISHED'}
+        return {"FINISHED"}
 
 
 def menu_fn(self, context):
