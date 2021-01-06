@@ -1,30 +1,28 @@
-if "bpy" in locals():
+if not("bpy" in locals()):
+    from . import translations
+    from . import gpencil_normalizer
+else:
     import imp
     imp.reload(translations)
     imp.reload(gpencil_normalizer)
-else:
-    from . import translations
-    from . import gpencil_normalizer
 
 
 import bpy
 from bpy import props, types
-# from . import translations
-# from . import gpencil_normalizer
 
 
-# 翻訳用の辞書
 GpSelectState = gpencil_normalizer.GpSelectState
 stroke_count_resampler = gpencil_normalizer.stroke_count_resampler
-translation_dict = translations.translation_dict
 
+# 翻訳用の辞書
+translation_dict = translations.translation_dict
 translation = bpy.app.translations.pgettext
 
 # アドオン用のいろいろ
 bl_info = {
     "name": "Blender Gpencil Stroke Normalizer",
     "author": "nepia",
-    "version": (0, 4, 0),
+    "version": (0, 4, 1),
     "blender": (2, 83, 0),
     "location": "types.VIEW3D_PT_tools_grease_pencil_interpolate",
     "description":
@@ -48,7 +46,7 @@ class NP_GPN_OT_GPencilStrokeCountResampler(types.Operator):
 
     bl_options = {"REGISTER", "UNDO"}
 
-    amount: props.IntProperty(
+    amount = props.IntProperty(
         name=translation("number of points"),
         default=100,
         min=1,
