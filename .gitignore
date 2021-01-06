@@ -2,3 +2,4 @@
 .venv
 Pipfile.lock
 __pycache__
+icon.png

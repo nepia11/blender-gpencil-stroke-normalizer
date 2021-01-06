@@ -1,29 +1,31 @@
+keys = [
+    "Sampling selection strokes by number of points",
+    "Sampling strokes",
+    "number of points",
+    "Normalize strokes",
+    "Match the maximum number of points "
+    "for the same stroke between frames.",
+
+    "Provides the ability to arbitrarily adjust the number of points "
+    "in a gpencil stroke.",
+
+]
+
+jp = [
+    "選択ストロークをポイント数でサンプリングする",
+    "ストロークをサンプリング",
+    "ポイント数",
+    "ストロークを正規化",
+    "フレーム間、同一ストロークのポイント数を最大値に合わせる",
+
+    "gpencilのストロークのポイント数を任意に調整する機能を提供します。"
+]
+
 translation_dict = {
-    "en_US": {
-        # ("*", "Template"): "Template",
-        ("*", "Sampling selection strokes by number of points"):
-            "Sampling selection strokes by number of points",
-        ("*", "Sampling strokes"):
-            "Sampling strokes",
-        ("*", "number of points"):
-            "number of points",
-        ("*", "Normalize stroke"):
-            "Normalize stroke",
-        ("*", "Normalize stroke description"):
-            "Match the maximum number of points for the same stroke between "
-            "frames.",
-    },
-    "ja_JP": {
-        # ("*", "Template"): "テンプレート",
-        ("*", "Sampling selection strokes by number of points"):
-            "選択ストロークをポイント数でサンプリングする",
-        ("*", "Sampling strokes"):
-            "ストロークをサンプリング",
-        ("*", "number of points"):
-            "ポイント数",
-        ("*", "Normalize stroke"):
-            "ストロークを正規化",
-        ("*", "Normalize stroke description"):
-            "フレーム間、同一ストロークのポイント数を最大値に合わせる",
-    },
+    "en_US": {("*", key): key for key in keys},
+    "ja_JP": {("*", key): j for key, j in zip(keys, jp)}
 }
+
+# debug
+# import pprint
+# pprint.pprint(translation_dict)

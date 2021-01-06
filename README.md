@@ -1,7 +1,8 @@
-# Blender Gpencil Normalizer
 ![image](image.png)
 
-gpencilのストロークのポイント数を任意に調整する機能を提供します。
+gpencilのストロークのポイント数を任意に調整する機能を提供します。  
+
+手書きアニメの中割生成の補助に使うことができます。
 
 ## Usage
 メニューは `gpencilオブジェクト > 編集モード > 補間` 内にあります。
