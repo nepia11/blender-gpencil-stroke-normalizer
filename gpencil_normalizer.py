@@ -1,4 +1,4 @@
-import pprint
+# import pprint
 import random
 import string
 
@@ -47,13 +47,15 @@ def count_stroke_points(gp_stroke: types.GPencilStroke) -> int:
 # フレーム間の各ストロークのポイント最大数を返す
 def calc_frames_strokes_max_count(gp_frames: types.GPencilFrames) -> ([int]):
     frame_len = len(gp_frames)
+
     debug_print(
         "#calc_frames_strokes_max_count():\n",
         "frame_len :", frame_len)
+
     if frame_len == 0:
         return 0
-    
-    frames_counts = [0] * len(gp_frames)
+
+    frames_counts = [0] * frame_len
     length = 0
     for i, frame in enumerate(gp_frames):
         counts = [
@@ -68,8 +70,8 @@ def calc_frames_strokes_max_count(gp_frames: types.GPencilFrames) -> ([int]):
         counts += [0] * (length - len(counts))
     np_counts = np.array(frames_counts)
     results_max = np.max(np_counts, axis=0)
-    pprint.pprint(np_counts)
-    pprint.pprint(results_max)
+    # pprint.pprint(np_counts)
+    # pprint.pprint(results_max)
 
     return results_max
     """
