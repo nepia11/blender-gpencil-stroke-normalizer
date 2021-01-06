@@ -22,12 +22,14 @@ translation = bpy.app.translations.pgettext
 
 # アドオン用のいろいろ
 bl_info = {
-    "name": "gpencil normalizer",
+    "name": "Blender Gpencil Stroke Normalizer",
     "author": "nepia",
-    "version": (0, 3, 2),
+    "version": (0, 4, 0),
     "blender": (2, 83, 0),
     "location": "types.VIEW3D_PT_tools_grease_pencil_interpolate",
-    "description": "gpencilのストロークのポイント数をフレーム間の最大値にリサンプルする",
+    "description":
+            "Provides the ability to arbitrarily adjust the number of points "
+            "in a gpencil stroke.",
     "warning": "",
     "support": "TESTING",
     "wiki_url": "",
@@ -72,8 +74,11 @@ class NP_GPN_OT_GPencilStrokeCountResampler(types.Operator):
 class NP_GPN_OT_GPencilStrokeCountNormalizer(types.Operator):
 
     bl_idname = "gpencil.np_gpencil_stroke_count_normalizer"
-    bl_label = translation("Normalize stroke")
-    bl_description = translation("Normalize stroke description")
+    bl_label = translation("Normalize strokes")
+    bl_description = translation(
+        "Match the maximum number of points "
+        "for the same stroke between frames."
+        )
     bl_options = {"REGISTER", "UNDO"}
 
     # メニューを実行したときに呼ばれるメソッド
@@ -111,8 +116,14 @@ class NP_GPN_OT_GPencilStrokeCountNormalizer(types.Operator):
 
 def menu_fn(self, context):
     self.layout.separator()
-    self.layout.operator(NP_GPN_OT_GPencilStrokeCountResampler.bl_idname)
-    self.layout.operator(NP_GPN_OT_GPencilStrokeCountNormalizer.bl_idname)
+    self.layout.operator(
+        NP_GPN_OT_GPencilStrokeCountResampler.bl_idname,
+        text=translation("Sampling strokes")
+        )
+    self.layout.operator(
+        NP_GPN_OT_GPencilStrokeCountNormalizer.bl_idname,
+        text=translation("Normalize strokes")
+        )
 
 
 classes = [
