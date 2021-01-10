@@ -23,11 +23,11 @@ def random_name(n: int) -> string:
     return "".join(random.choices(string.ascii_letters + string.digits, k=n))
 
 
-def make_zip(file_list: tuple, prefix: str):
-    org_name: str = "bleder_gpencil_stroke_normalizer"
+def make_zip(org_name: str, file_list: tuple, prefix: str):
     zip_name: str = org_name+"_"+prefix
     zip_dir = "./"+zip_name
     zip_path = "./" + zip_name + ".zip"
+    print(zip_path)
 
     os.mkdir(zip_name)
     for s in file_list:
@@ -44,12 +44,18 @@ def make_zip(file_list: tuple, prefix: str):
 
 
 def main(args):
-    try:
-        _hash = args[1]
-    except IndexError:
-        _hash = random_name(4)
+    arg_len = len(args)
+    org_name: str = "blender_gpencil_stroke_normalizer"
+    prefix: str = ""
+    if arg_len == 1:
+        prefix = random_name(4)
+    elif arg_len == 2:
+        prefix = args[1]
+    else:
+        org_name = args[1]
+        prefix = args[2]
 
-    make_zip(file_list, _hash)
+    make_zip(org_name, file_list, prefix)
 
 
 main(args)
