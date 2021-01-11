@@ -36,8 +36,8 @@ def make_zip(org_name: str, file_list: tuple, prefix: str):
     zp = zipfile.ZipFile(zip_path, mode="w", compression=zipfile.ZIP_DEFLATED)
 
     for dirname, subdirs, filenames in os.walk(zip_dir):
-        for fname in filenames:
-            zp.write(os.path.join(dirname, fname))
+        for filename in filenames:
+            zp.write(os.path.join(dirname, filename))
 
     zp.close
     shutil.rmtree(zip_dir)
