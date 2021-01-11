@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "coenraads.bracket-pair-colorizer-2",
+        "streetsidesoftware.code-spell-checker",
+        "oderwat.indent-rainbow",
+        "ms-python.vscode-pylance",
+        "esbenp.prettier-vscode",
+        "editorconfig.editorconfig"
+    ]
+}

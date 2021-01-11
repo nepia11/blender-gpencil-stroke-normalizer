@@ -1,0 +1,18 @@
+{
+    "python.analysis.diagnosticMode": "workspace",
+    "python.analysis.completeFunctionParens": true,
+    "python.analysis.typeCheckingMode": "basic",
+    "python.formatting.provider": "autopep8",
+    "python.pythonPath": ".venv/bin/python",
+    "python.linting.flake8Enabled": true,
+    "python.linting.enabled": true,
+    "cSpell.words": [
+        "Autobuild",
+        "codeql",
+        "gpencil",
+        "idname",
+        "numpy",
+        "subdirs",
+        "unregister"
+    ]
+}
