@@ -1,10 +1,12 @@
 if not("bpy" in locals()):
     from . import translations
     from . import gpencil_normalizer
+    from . import rainbow_strokes
 else:
     import imp
     imp.reload(translations)
     imp.reload(gpencil_normalizer)
+    imp.reload(rainbow_strokes)
 
 
 import bpy
@@ -76,7 +78,7 @@ class NP_GPN_OT_GPencilStrokeCountNormalizer(types.Operator):
     bl_description = translation(
         "Match the maximum number of points "
         "for the same stroke between frames."
-        )
+    )
     bl_options = {"REGISTER", "UNDO"}
 
     # メニューを実行したときに呼ばれるメソッド
@@ -112,21 +114,44 @@ class NP_GPN_OT_GPencilStrokeCountNormalizer(types.Operator):
         return {"FINISHED"}
 
 
+class NP_GPN_OT_RainbowStrokes(types.Operator):
+
+    bl_idname = "gpencil.np_rainbow_strokes"
+    bl_label = "rainbow strokes"
+    bl_description = ""
+    bl_options = {"REGISTER", "UNDO"}
+
+    # メニューを実行したときに呼ばれるメソッド
+    def execute(self, context):
+        # context.active_object.data = data.grease_pencils['Stroke']
+        gp_data = context.active_object.data
+
+        for layer in gp_data.layers:
+            for frame in layer.frames:
+                rainbow_strokes.rainbow_strokes(frame.strokes)
+
+        self.report({"INFO"}, "rainbow strokes!")
+
+        return {"FINISHED"}
+
+
 def menu_fn(self, context):
     self.layout.separator()
     self.layout.operator(
         NP_GPN_OT_GPencilStrokeCountResampler.bl_idname,
         text=translation("Sampling strokes")
-        )
+    )
     self.layout.operator(
         NP_GPN_OT_GPencilStrokeCountNormalizer.bl_idname,
         text=translation("Normalize strokes")
-        )
+    )
+    self.layout.operator(NP_GPN_OT_RainbowStrokes.bl_idname)
 
 
 classes = [
     NP_GPN_OT_GPencilStrokeCountResampler,
     NP_GPN_OT_GPencilStrokeCountNormalizer,
+    NP_GPN_OT_RainbowStrokes,
 ]
 
 

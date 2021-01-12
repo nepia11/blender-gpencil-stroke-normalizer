@@ -8,6 +8,7 @@
     "python.linting.enabled": true,
     "cSpell.words": [
         "Autobuild",
+        "RGBA",
         "codeql",
         "gpencil",
         "idname",

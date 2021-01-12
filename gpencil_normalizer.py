@@ -46,6 +46,17 @@ def count_stroke_points(gp_stroke: types.GPencilStroke) -> int:
 
 # フレーム間の各ストロークのポイント最大数を返す
 def calc_frames_strokes_max_count(gp_frames: types.GPencilFrames) -> ([int]):
+    """
+    [
+        frame[stroke1,2,3,4],
+        frame[stroke1,2,3,4],
+        frame[stroke1,2,3,4],
+        frame[stroke1,2,3,4],
+    ]
+    こんな感じで入ってるのを
+    [stroke_max,stroke_max,stroke_max,stroke_max,]
+    こうしてる感じ
+    """
     frame_len = len(gp_frames)
 
     debug_print(
@@ -74,17 +85,6 @@ def calc_frames_strokes_max_count(gp_frames: types.GPencilFrames) -> ([int]):
     # pprint.pprint(results_max)
 
     return results_max
-    """
-    [
-        frame[stroke1,2,3,4],
-        frame[stroke1,2,3,4],
-        frame[stroke1,2,3,4],
-        frame[stroke1,2,3,4],
-    ]
-    こんな感じで入ってるのを
-    [stroke_max,stroke_max,stroke_max,stroke_max,]
-    こうしてる感じ
-    """
 
 
 def calc_offset(src_len: float, segment_len: float, point_count: int) -> float:
@@ -98,7 +98,8 @@ def calc_offset(src_len: float, segment_len: float, point_count: int) -> float:
 
 # ストロークをポイント数でサンプリングする
 def stroke_count_resampler(
-    gp_stroke: types.GPencilStroke, result_count: int
+        gp_stroke: types.GPencilStroke,
+        result_count: int
 ) -> (int, float, int, int):
     # 単純にresult_countで割るとポイント数に1,2程度の誤差が起きるのでオフセット値をつける
     # 1.5でうまく行くことはわかったけど理由がわからない　ほんとに何？？？
