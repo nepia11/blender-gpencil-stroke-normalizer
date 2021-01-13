@@ -22,10 +22,6 @@ jobs:
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
 
-      - name: Set env
-        run: |
-          echo "RELEASE_VERSION=${{ github.ref:10 }}" >> $github.env
-
       - name: build
         run: |
           python build.py blender_gpencil_stroke_normalizer release
