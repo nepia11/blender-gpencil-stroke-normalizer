@@ -24,7 +24,7 @@ translation = bpy.app.translations.pgettext
 bl_info = {
     "name": "Blender Gpencil Stroke Normalizer",
     "author": "nepia",
-    "version": (0, 4, 1),
+    "version": (0, 5, 0),
     "blender": (2, 83, 0),
     "location": "types.VIEW3D_PT_tools_grease_pencil_interpolate",
     "description":
