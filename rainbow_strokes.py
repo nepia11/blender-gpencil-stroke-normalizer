@@ -19,14 +19,21 @@ def rainbow(index: int) -> (float, float, float, float):
     return rgb + (a,)
 
 
-def colorize_stroke(stroke: bpy.types.GPencilStroke, index: int):
+def colorize_stroke(
+        stroke: bpy.types.GPencilStroke,
+        index: int,
+        visible_start: bool = True):
     """
     参照方法メモ \n
     lines.frames[0].strokes[0].points[0].vertex_color=(1,0,0,1)
     """
     color = rainbow(index)
-    for point in stroke.points:
+    points = stroke.points
+    for point in points:
         point.vertex_color = color
+
+    if visible_start:
+        points[0].vertex_color = (0, 0, 0, 1)
 
 
 def rainbow_strokes(strokes: bpy.types.GPencilStrokes):
@@ -34,9 +41,12 @@ def rainbow_strokes(strokes: bpy.types.GPencilStrokes):
     strokesのインデックスに合せて頂点カラーを設定します
     """
     for i, stroke in enumerate(strokes):
-        colorize_stroke(stroke, i)
+        colorize_stroke(stroke, i, True)
 
 
 def get_stroke_vertex_color(stroke: bpy.types.GPencilStroke) -> list:
-    color = [point.vertex_color for point in stroke.points]
-    return color
+    return [tuple(point.vertex_color) for point in stroke.points]
+
+
+def get_all_strokes_vertex_color(strokes: bpy.types.GPencilStrokes):
+    return [get_stroke_vertex_color(stroke) for stroke in strokes]

@@ -115,51 +115,170 @@ class NP_GPN_OT_GPencilStrokeCountNormalizer(types.Operator):
 
 
 class NP_GPN_OT_RainbowStrokes(types.Operator):
+    """
+    timer eventについて参照
+    https://colorful-pico.net/introduction-to-addon-development-in-blender/2.8/html/chapter_03/03_Handle_Timer_Event.html
+    """
 
     bl_idname = "gpencil.np_rainbow_strokes"
     bl_label = "rainbow strokes"
     bl_description = ""
     bl_options = {"REGISTER", "UNDO"}
 
+    # タイマのハンドラ
+    __timer = None
+
+    @classmethod
+    def is_running(cls):
+        # モーダルモード中はTrue
+        return True if cls.__timer else False
+
+    def __handle_add(self, context):
+        if not self.is_running():
+            # タイマを登録
+            interval = 0.5
+            NP_GPN_OT_RainbowStrokes.__timer = \
+                context.window_manager.event_timer_add(
+                    interval, window=context.window
+                )
+            # モーダルモードへの移行
+            context.window_manager.modal_handler_add(self)
+
+    def __handle_remove(self, context):
+        if self.is_running():
+            # タイマの登録を解除
+            context.window_manager.event_timer_remove(
+                NP_GPN_OT_RainbowStrokes.__timer)
+            NP_GPN_OT_RainbowStrokes.__timer = None
+
+    def modal(self, context, event):
+        # op_cls = NP_GPN_OT_RainbowStrokes
+
+        # エリアを再描画
+        if context.area:
+            context.area.tag_redraw()
+
+        # パネル [日時を表示] のボタン [終了] を押したときに、モーダルモードを終了
+        if not self.is_running():
+            return {'FINISHED'}
+
+        # タイマーイベントが来た時にする処理
+        if event.type == 'TIMER':
+            try:
+                if type(context.active_object.data) is bpy.types.GreasePencil:
+                    gp_data = context.active_object.data
+                    for layer in gp_data.layers:
+                        for frame in layer.frames:
+                            rainbow_strokes.rainbow_strokes(frame.strokes)
+            except AttributeError:
+                # モーダルモードを終了
+                self.__handle_remove(context)
+                return {'FINISHED'}
+
+        return {'PASS_THROUGH'}
+
+    def invoke(self, context, event):
+        op_cls = NP_GPN_OT_RainbowStrokes
+
+        if context.area.type == 'VIEW_3D':
+            # [開始] ボタンが押された時の処理
+            if not op_cls.is_running():
+                # 何らかの処理
+
+                # モーダルモードを開始
+                self.__handle_add(context)
+                return {'RUNNING_MODAL'}
+            # [終了] ボタンが押された時の処理
+            else:
+                # モーダルモードを終了
+                self.__handle_remove(context)
+                return {'FINISHED'}
+        else:
+            return {'CANCELLED'}
+
     # メニューを実行したときに呼ばれるメソッド
-    def execute(self, context):
-        # context.active_object.data = data.grease_pencils['Stroke']
-        gp_data = context.active_object.data
+    # def execute(self, context):
+    #     # context.active_object.data = data.grease_pencils['Stroke']
+    #     gp_data = context.active_object.data
 
-        for layer in gp_data.layers:
-            for frame in layer.frames:
-                rainbow_strokes.rainbow_strokes(frame.strokes)
+    #     for layer in gp_data.layers:
+    #         for frame in layer.frames:
+    #             rainbow_strokes.rainbow_strokes(frame.strokes)
 
-        self.report({"INFO"}, "rainbow strokes!")
+    #     self.report({"INFO"}, "rainbow strokes!")
 
-        return {"FINISHED"}
+    #     return {"FINISHED"}
 
 
-def menu_fn(self, context):
-    self.layout.separator()
-    self.layout.operator(
-        NP_GPN_OT_GPencilStrokeCountResampler.bl_idname,
-        text=translation("Sampling strokes")
-    )
-    self.layout.operator(
-        NP_GPN_OT_GPencilStrokeCountNormalizer.bl_idname,
-        text=translation("Normalize strokes")
-    )
-    self.layout.operator(NP_GPN_OT_RainbowStrokes.bl_idname)
+class NP_GPN_PT_GPencilNormalizer(bpy.types.Panel):
+
+    bl_label = "GPencil Normalizer"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "GPSN"
+    # bl_context = "objectmode"
+
+    # 本クラスの処理が実行可能かを判定する
+    @classmethod
+    def poll(cls, context):
+        # アクティブオブジェクトがgpencilか
+        try:
+            if type(context.active_object.data) is bpy.types.GreasePencil:
+                return True
+        except AttributeError:
+            return False
+
+    def draw(self, context):
+        layout = self.layout
+
+        # ranbow strokes
+        layout.label(text=translation("rainbow strokes")+":")
+
+        # [開始] / [終了] ボタンを追加
+        if not NP_GPN_OT_RainbowStrokes.is_running():
+            layout.operator(
+                NP_GPN_OT_RainbowStrokes.bl_idname,
+                text="start", icon='PLAY')
+        else:
+            layout.operator(
+                NP_GPN_OT_RainbowStrokes.bl_idname,
+                text="stop", icon='PAUSE')
+        # ストロークサンプリング機能
+        layout.label(text=translation("Normalize strokes")+":")
+        layout.operator(
+            NP_GPN_OT_GPencilStrokeCountResampler.bl_idname,
+            text=translation("Sampling strokes")
+        )
+        layout.operator(
+            NP_GPN_OT_GPencilStrokeCountNormalizer.bl_idname,
+            text=translation("Normalize strokes"))
+
+
+# def menu_fn(self, context):
+#     self.layout.separator()
+#     self.layout.operator(
+#         NP_GPN_OT_GPencilStrokeCountResampler.bl_idname,
+#         text=translation("Sampling strokes")
+#     )
+#     self.layout.operator(
+#         NP_GPN_OT_GPencilStrokeCountNormalizer.bl_idname,
+#         text=translation("Normalize strokes")
+#     )
+#     self.layout.operator(NP_GPN_OT_RainbowStrokes.bl_idname)
 
 
 classes = [
     NP_GPN_OT_GPencilStrokeCountResampler,
     NP_GPN_OT_GPencilStrokeCountNormalizer,
     NP_GPN_OT_RainbowStrokes,
+    NP_GPN_PT_GPencilNormalizer,
 ]
 
 
 def register():
     for c in classes:
         bpy.utils.register_class(c)
-    # types.VIEW3D_MT_gpencil_edit_context_menu.append(menu_fn)
-    types.VIEW3D_PT_tools_grease_pencil_interpolate.append(menu_fn)
+    # types.VIEW3D_PT_tools_grease_pencil_interpolate.append(menu_fn)
 
     # 翻訳辞書の登録
     bpy.app.translations.register(__name__, translation_dict)
@@ -168,9 +287,7 @@ def register():
 def unregister():
     # 翻訳辞書の登録解除
     bpy.app.translations.unregister(__name__)
-
-    # types.VIEW3D_MT_gpencil_edit_context_menu.remove(menu_fn)
-    types.VIEW3D_PT_tools_grease_pencil_interpolate.remove(menu_fn)
+    # types.VIEW3D_PT_tools_grease_pencil_interpolate.remove(menu_fn)
     for c in classes:
         bpy.utils.unregister_class(c)
 

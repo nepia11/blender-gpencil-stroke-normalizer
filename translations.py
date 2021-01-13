@@ -8,7 +8,7 @@ keys = [
 
     "Provides the ability to arbitrarily adjust the number of points "
     "in a gpencil stroke.",
-
+    "rainbow strokes",
 ]
 
 jp = [
@@ -19,6 +19,7 @@ jp = [
     "フレーム間、同一ストロークのポイント数を最大値に合わせる",
 
     "gpencilのストロークのポイント数を任意に調整する機能を提供します。"
+    "レインボーストローク"
 ]
 
 translation_dict = {
