@@ -11,6 +11,7 @@ file_list = (
     "__init__.py",
     "gpencil_normalizer.py",
     "translations.py",
+    "rainbow_strokes"
     "LICENSE",
     "README.md"
 )
