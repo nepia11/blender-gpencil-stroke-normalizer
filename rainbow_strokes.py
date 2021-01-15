@@ -65,7 +65,6 @@ def rainbow_strokes(strokes: bpy.types.GPencilStrokes):
     print(rainbow.cache_info())
 
 
-
 def get_stroke_vertex_color(stroke: bpy.types.GPencilStroke) -> list:
     return [tuple(point.vertex_color) for point in stroke.points]
 
