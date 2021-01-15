@@ -170,6 +170,7 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
                 self.rs.update(context)
             except AttributeError:
                 # モーダルモードを終了
+                self.rs.cache_clear()
                 self.__handle_remove(context)
                 return {'FINISHED'}
 
@@ -189,6 +190,7 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
             # [終了] ボタンが押された時の処理
             else:
                 # モーダルモードを終了
+                self.rs.cache_clear()
                 self.__handle_remove(context)
                 return {'FINISHED'}
         else:

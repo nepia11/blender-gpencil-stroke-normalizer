@@ -1,11 +1,11 @@
 import bpy
 import colorsys
 import numpy as np
-from functools import lru_cache
+from functools import cache
 
 
 # 関数の返り値をキャッシュしてくれるらしい
-@lru_cache(maxsize=None)
+@cache
 def rainbow(index: int) -> [float, float, float, float]:
     h, s, v, a = 1.0, 0.2, 1.0, 1.0
     s_collection = (1.0, 0.8, 0.6, 0.4)
@@ -58,6 +58,8 @@ def rainbow_strokes(strokes: bpy.types.GPencilStrokes):
     """
     n = [colorize_stroke(stroke, i, True) for i, stroke in enumerate(strokes)]
     print("update:", sum(n))
+    print(rainbow.cache_info())
+
 
 
 def get_stroke_vertex_color(stroke: bpy.types.GPencilStroke) -> list:
@@ -87,3 +89,8 @@ class RainbowStrokes:
             for layer in gp_data.layers:
                 for frame in layer.frames:
                     rainbow_strokes(frame.strokes)
+
+    def cache_clear(self):
+        print(rainbow.cache_info())
+        rainbow.cache_clear()
+        print(rainbow.cache_info())
