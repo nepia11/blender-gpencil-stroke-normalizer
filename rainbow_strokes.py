@@ -34,11 +34,15 @@ def colorize_stroke(
     """
     color = rainbow(index)
     points = stroke.points
-    # キャッシュ効率を確認できるやつ
-    # print(rainbow.cache_info())
+    stroke_len = len(points)
+    n = -1
+
+    if stroke_len == 1:
+        n = 0
+        visible_start = False
 
     # すでに同色に変更済みのストロークを無視する
-    test_value = list(points[1].vertex_color)
+    test_value = list(points[n].vertex_color)
     # print("testvalue: ", test_value, "color: ", test_color)
     if test_value == color:
         return 0

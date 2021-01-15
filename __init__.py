@@ -138,7 +138,7 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
     def __handle_add(self, context):
         if not self.is_running():
             # タイマを登録
-            interval = 0.5
+            interval = 0.2
             NP_GPN_OT_RainbowStrokes.__timer = \
                 context.window_manager.event_timer_add(
                     interval, window=context.window
