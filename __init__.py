@@ -128,6 +128,8 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
     # タイマのハンドラ
     __timer = None
 
+    rs = rainbow_strokes.RainbowStrokes()
+
     @classmethod
     def is_running(cls):
         # モーダルモード中はTrue
@@ -165,11 +167,7 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
         # タイマーイベントが来た時にする処理
         if event.type == 'TIMER':
             try:
-                if type(context.active_object.data) is bpy.types.GreasePencil:
-                    gp_data = context.active_object.data
-                    for layer in gp_data.layers:
-                        for frame in layer.frames:
-                            rainbow_strokes.rainbow_strokes(frame.strokes)
+                self.rs.update(context)
             except AttributeError:
                 # モーダルモードを終了
                 self.__handle_remove(context)
