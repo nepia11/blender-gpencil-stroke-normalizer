@@ -10,10 +10,13 @@
         "Autobuild",
         "RGBA",
         "codeql",
+        "colorsys",
+        "dtype",
         "gpencil",
         "idname",
         "numpy",
         "subdirs",
+        "tolist",
         "unregister"
     ]
 }
