@@ -1,6 +1,5 @@
 # import pprint
-import random
-import string
+from .util import random_name
 
 import numpy as np
 from bpy import ops, types
@@ -12,10 +11,6 @@ DEBUG = False
 def debug_print(*args):
     if DEBUG:
         print(*args)
-
-
-def random_name(n: int) -> string:
-    return "".join(random.choices(string.ascii_letters + string.digits, k=n))
 
 
 # 2つのベクトルから長さを求める

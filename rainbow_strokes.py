@@ -2,6 +2,7 @@ import bpy
 import colorsys
 import numpy as np
 from functools import cache
+from . import util
 
 
 # 関数の返り値をキャッシュしてくれるらしい
@@ -69,22 +70,59 @@ def get_stroke_vertex_color(stroke: bpy.types.GPencilStroke) -> list:
     return [tuple(point.vertex_color) for point in stroke.points]
 
 
-def get_all_strokes_vertex_color(strokes: bpy.types.GPencilStrokes):
+def get_all_strokes_vertex_color(strokes: bpy.types.GPencilStrokes) -> list:
     return [get_stroke_vertex_color(stroke) for stroke in strokes]
 
 
 class RainbowStrokes:
+    """
+    a
+    """
+
     def __init__(self):
         pass
 
-    # まだ作ってないので使えないぞ
     def save(self, context):
+        def _save(state: dict, obj, type_str: str):
+            state["tag"] = util.random_name(8)
+            if type_str == "layer":
+                fl = len(obj.frames)
+                state["frames"] = [{} for _ in range(fl)]
+            if type_str == "frame":
+                sl = len(obj.strokes)
+                state["strokes"] = [{} for _ in range(sl)]
+            if type_str == "stroke":
+                v_color = get_stroke_vertex_color(obj)
+                state["vertex_color"] = v_color
+
         if type(context.active_object.data) is bpy.types.GreasePencil:
             gp_data = context.active_object.data
-            for layer in gp_data.layers:
-                for frame in layer.frames:
-                    # rainbow_strokes(frame.strokes)
-                    pass
+            self.current_gp_data = gp_data
+            state = {
+                "layers": [{"tag": util.random_name(8)
+                            } for _ in range(len(gp_data.layers))]
+            }
+            util.gp_licker(gp_data, _save, state)
+            self.state = state
+            print(state)
+            return state
+
+    def load(self, context):
+        def _load(state: dict, obj, type_str: str):
+            if type_str == "layer":
+                pass
+            if type_str == "frame":
+                pass
+            if type_str == "stroke":
+                v_color = state["vertex_color"]
+                # print("load", v_color)
+                for i, point in enumerate(obj.points):
+                    point.vertex_color = v_color[i]
+
+        if type(context.active_object.data) is bpy.types.GreasePencil:
+            gp_data = context.active_object.data
+            self.current_gp_data = gp_data
+            util.gp_licker(gp_data, _load, self.state)
 
     def update(self, context):
         if type(context.active_object.data) is bpy.types.GreasePencil:

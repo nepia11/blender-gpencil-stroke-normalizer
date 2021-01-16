@@ -152,6 +152,8 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
             context.window_manager.event_timer_remove(
                 NP_GPN_OT_RainbowStrokes.__timer)
             NP_GPN_OT_RainbowStrokes.__timer = None
+            self.rs.load(context)
+            self.rs.cache_clear()
 
     def modal(self, context, event):
         # op_cls = NP_GPN_OT_RainbowStrokes
@@ -170,7 +172,6 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
                 self.rs.update(context)
             except AttributeError:
                 # モーダルモードを終了
-                self.rs.cache_clear()
                 self.__handle_remove(context)
                 return {'FINISHED'}
 
@@ -183,14 +184,13 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
             # [開始] ボタンが押された時の処理
             if not op_cls.is_running():
                 # 何らかの処理
-
+                self.rs.save(context)
                 # モーダルモードを開始
                 self.__handle_add(context)
                 return {'RUNNING_MODAL'}
             # [終了] ボタンが押された時の処理
             else:
                 # モーダルモードを終了
-                self.rs.cache_clear()
                 self.__handle_remove(context)
                 return {'FINISHED'}
         else:
