@@ -8,12 +8,15 @@ import zipfile
 # リリース用のzipを作るスクリプト
 
 file_list = (
-    "__init__.py",
-    "gpencil_normalizer.py",
-    "translations.py",
-    "rainbow_strokes.py",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "__init__.py",
+    "lib",
+)
+
+ignores = shutil.ignore_patterns(
+    "__pycache__",
+    "*.pyc"
 )
 
 # 引数
@@ -32,7 +35,11 @@ def make_zip(org_name: str, file_list: tuple, prefix: str):
 
     os.mkdir(zip_name)
     for s in file_list:
-        shutil.copy("./"+s, zip_name)
+        _path = "./"+s
+        if os.path.isdir(_path):
+            shutil.copytree(_path, zip_dir+"/"+_path, ignore=ignores)
+        else:
+            shutil.copy(_path, zip_dir)
 
     zp = zipfile.ZipFile(zip_path, mode="w", compression=zipfile.ZIP_DEFLATED)
 

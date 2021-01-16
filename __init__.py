@@ -1,7 +1,7 @@
 if not("bpy" in locals()):
-    from . import translations
-    from . import gpencil_normalizer
-    from . import rainbow_strokes
+    from .lib import translations
+    from .lib import gpencil_normalizer
+    from .lib import rainbow_strokes
 else:
     import imp
     imp.reload(translations)
