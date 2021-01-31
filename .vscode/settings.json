@@ -1,22 +1,25 @@
 {
-    "python.analysis.diagnosticMode": "workspace",
-    "python.analysis.completeFunctionParens": true,
-    "python.analysis.typeCheckingMode": "basic",
-    "python.formatting.provider": "autopep8",
-    "python.pythonPath": ".venv/bin/python",
-    "python.linting.flake8Enabled": true,
-    "python.linting.enabled": true,
-    "cSpell.words": [
-        "Autobuild",
-        "RGBA",
-        "codeql",
-        "colorsys",
-        "dtype",
-        "gpencil",
-        "idname",
-        "numpy",
-        "subdirs",
-        "tolist",
-        "unregister"
-    ]
+  // "python.analysis.diagnosticMode": "workspace",
+  "python.analysis.diagnosticMode": "openFilesOnly",
+  "python.analysis.completeFunctionParens": true,
+  "python.analysis.typeCheckingMode": "strict",
+  "python.analysis.autoSearchPaths": true,
+  "python.formatting.provider": "autopep8",
+  "python.pythonPath": ".venv/bin/python",
+  "python.linting.flake8Enabled": true,
+  "python.linting.enabled": true,
+  // "python.languageServer": "Pylance",
+  "cSpell.words": [
+    "Autobuild",
+    "RGBA",
+    "codeql",
+    "colorsys",
+    "dtype",
+    "gpencil",
+    "idname",
+    "numpy",
+    "subdirs",
+    "tolist",
+    "unregister"
+  ]
 }

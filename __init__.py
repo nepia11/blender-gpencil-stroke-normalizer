@@ -8,10 +8,8 @@ else:
     imp.reload(gpencil_normalizer)
     imp.reload(rainbow_strokes)
 
-
 import bpy
 from bpy import props, types
-
 
 GpSelectState = gpencil_normalizer.GpSelectState
 stroke_count_resampler = gpencil_normalizer.stroke_count_resampler
@@ -128,7 +126,7 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
     # タイマのハンドラ
     __timer = None
 
-    rs = rainbow_strokes.RainbowStrokes()
+    rso = rainbow_strokes.RainbowStrokeObject()
 
     @classmethod
     def is_running(cls):
@@ -145,6 +143,7 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
                 )
             # モーダルモードへの移行
             context.window_manager.modal_handler_add(self)
+            self.rso.init(context)
 
     def __handle_remove(self, context):
         if self.is_running():
@@ -152,8 +151,8 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
             context.window_manager.event_timer_remove(
                 NP_GPN_OT_RainbowStrokes.__timer)
             NP_GPN_OT_RainbowStrokes.__timer = None
-            self.rs.load(context)
-            self.rs.cache_clear()
+
+            self.rso.clear()
 
     def modal(self, context, event):
         # op_cls = NP_GPN_OT_RainbowStrokes
@@ -162,14 +161,13 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
         if context.area:
             context.area.tag_redraw()
 
-        # パネル [日時を表示] のボタン [終了] を押したときに、モーダルモードを終了
         if not self.is_running():
             return {'FINISHED'}
 
         # タイマーイベントが来た時にする処理
         if event.type == 'TIMER':
             try:
-                self.rs.update(context)
+                self.rso.update()
             except AttributeError:
                 # モーダルモードを終了
                 self.__handle_remove(context)
@@ -181,10 +179,7 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
         op_cls = NP_GPN_OT_RainbowStrokes
 
         if context.area.type == 'VIEW_3D':
-            # [開始] ボタンが押された時の処理
             if not op_cls.is_running():
-                # 何らかの処理
-                self.rs.save(context)
                 # モーダルモードを開始
                 self.__handle_add(context)
                 return {'RUNNING_MODAL'}
@@ -195,19 +190,6 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
                 return {'FINISHED'}
         else:
             return {'CANCELLED'}
-
-    # メニューを実行したときに呼ばれるメソッド
-    # def execute(self, context):
-    #     # context.active_object.data = data.grease_pencils['Stroke']
-    #     gp_data = context.active_object.data
-
-    #     for layer in gp_data.layers:
-    #         for frame in layer.frames:
-    #             rainbow_strokes.rainbow_strokes(frame.strokes)
-
-    #     self.report({"INFO"}, "rainbow strokes!")
-
-    #     return {"FINISHED"}
 
 
 class NP_GPN_PT_GPencilNormalizer(bpy.types.Panel):

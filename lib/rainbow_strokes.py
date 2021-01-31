@@ -62,8 +62,9 @@ def rainbow_strokes(strokes: bpy.types.GPencilStrokes):
     strokesのインデックスに合せて頂点カラーを設定します
     """
     n = [colorize_stroke(stroke, i, True) for i, stroke in enumerate(strokes)]
-    print("update:", sum(n))
-    print(rainbow.cache_info())
+    return n
+    # print("update:", sum(n))
+    # print(rainbow.cache_info())
 
 
 def get_stroke_vertex_color(stroke: bpy.types.GPencilStroke) -> list:
@@ -74,9 +75,67 @@ def get_all_strokes_vertex_color(strokes: bpy.types.GPencilStrokes) -> list:
     return [get_stroke_vertex_color(stroke) for stroke in strokes]
 
 
+class RainbowStrokeObject:
+    def init(self, context):
+        # 選択状態を保存
+        selects: list = context.selected_objects
+        orig_mode: str = context.mode
+        if orig_mode != "OBJECT":
+            bpy.ops.object.mode_set(mode="OBJECT")
+        # もとのオブジェクトを取得、複製
+        orig_obj = context.active_object
+        orig_name = orig_obj.name
+        temp_name = util.random_name(8)
+        orig_obj.name = temp_name
+        bpy.ops.object.duplicate_move()
+        rs_obj = context.collection.objects[temp_name + ".001"]
+        # ロックしておく
+        rs_obj.hide_select = True
+        # 名前を戻しておく
+        orig_obj.name = orig_name
+
+        self.colorize(rs_obj.data)
+        self.orig_obj = orig_obj
+        self.rs_obj = rs_obj
+        self.temp_name = temp_name
+        # deselect
+        for _scene_obj in context.scene.objects:
+            _scene_obj.select_set(False)
+
+        # 選択状態をもとに戻す
+        for _obj in selects:
+            _obj.select_set(True)
+
+        bpy.ops.object.mode_set(mode=orig_mode)
+
+    def update(self):
+        old_data = self.rs_obj.data
+        new_data = self.orig_obj.data.copy()
+        new_data.name = self.temp_name + "_prev"
+        self.colorize(new_data)
+        self.rs_obj.data = new_data
+        bpy.data.batch_remove([old_data.id_data])
+
+    def clear(self):
+        print("clear rso")
+        bpy.ops.object.mode_set(mode="OBJECT")
+        bpy.ops.object.delete({"selected_objects": [self.rs_obj]})
+        bpy.data.batch_remove([self.rs_obj.data.id_data])
+        del self.orig_obj
+        del self.rs_obj
+        del self.temp_name
+
+    @staticmethod
+    def colorize(gp_data: bpy.types.GreasePencil):
+        # gp_data = self.rs_obj.data
+        for layer in gp_data.layers:
+            for frame in layer.frames:
+                rainbow_strokes(frame.strokes)
+
+
 class RainbowStrokes:
     """
-    a
+    難しいのでやめた
     """
 
     def __init__(self):
@@ -104,7 +163,7 @@ class RainbowStrokes:
             }
             util.gp_licker(gp_data, _save, state)
             self.state = state
-            print(state)
+            # print(state)
             return state
 
     def load(self, context):
@@ -135,3 +194,7 @@ class RainbowStrokes:
         print(rainbow.cache_info())
         rainbow.cache_clear()
         print(rainbow.cache_info())
+
+    def reset(self):
+        del self.state
+        del self.current_gp_data

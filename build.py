@@ -23,7 +23,7 @@ ignores = shutil.ignore_patterns(
 args = sys.argv
 
 
-def random_name(n: int) -> string:
+def random_name(n: int) -> str:
     return "".join(random.choices(string.ascii_letters + string.digits, k=n))
 
 

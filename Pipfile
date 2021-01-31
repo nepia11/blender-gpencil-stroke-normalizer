@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 "fake-bpy-module-2.83" = "*"
 flake8 = "*"
+autopep8 = "*"
 
 [dev-packages]
 
