@@ -77,13 +77,12 @@ def get_all_strokes_vertex_color(strokes: bpy.types.GPencilStrokes) -> list:
 
 class RainbowStrokeObject:
     def init(self, context):
-        # 選択状態を保存
-        selects: list = context.selected_objects
         orig_mode: str = context.mode
         if orig_mode != "OBJECT":
             bpy.ops.object.mode_set(mode="OBJECT")
         # もとのオブジェクトを取得、複製
         orig_obj = context.active_object
+        print("orig_obj:", orig_obj)
         orig_name = orig_obj.name
         temp_name = util.random_name(8)
         orig_obj.name = temp_name
@@ -99,19 +98,26 @@ class RainbowStrokeObject:
         self.rs_obj = rs_obj
         self.temp_name = temp_name
         # deselect
+        print("scene.objects", list(context.scene.objects))
         for _scene_obj in context.scene.objects:
             _scene_obj.select_set(False)
 
+        print("scene.objects", list(context.scene.objects))
+
         # 選択状態をもとに戻す
-        for _obj in selects:
-            _obj.select_set(True)
+        # for _obj in selects:
+        #     _obj.select_set(True)
+        orig_obj.select_set(True)
+        context.view_layer.objects.active = orig_obj
 
         bpy.ops.object.mode_set(mode=orig_mode)
 
-    def update(self):
+    def update(self, opacity=0.5):
         old_data = self.rs_obj.data
         new_data = self.orig_obj.data.copy()
         new_data.name = self.temp_name + "_prev"
+        for layer in new_data.layers:
+            layer.opacity *= opacity
         self.colorize(new_data)
         self.rs_obj.data = new_data
         bpy.data.batch_remove([old_data.id_data])
@@ -119,8 +125,12 @@ class RainbowStrokeObject:
     def clear(self):
         print("clear rso")
         bpy.ops.object.mode_set(mode="OBJECT")
-        bpy.ops.object.delete({"selected_objects": [self.rs_obj]})
-        bpy.data.batch_remove([self.rs_obj.data.id_data])
+        try:
+            bpy.data.batch_remove([self.rs_obj.data.id_data])
+            bpy.ops.object.delete({"selected_objects": [self.rs_obj]})
+        except (ReferenceError, AttributeError):
+            #  見つからないならしょうがない。それ以外のときは例外を見たい
+            pass
         del self.orig_obj
         del self.rs_obj
         del self.temp_name
@@ -131,70 +141,3 @@ class RainbowStrokeObject:
         for layer in gp_data.layers:
             for frame in layer.frames:
                 rainbow_strokes(frame.strokes)
-
-
-class RainbowStrokes:
-    """
-    難しいのでやめた
-    """
-
-    def __init__(self):
-        pass
-
-    def save(self, context):
-        def _save(state: dict, obj, type_str: str):
-            state["tag"] = util.random_name(8)
-            if type_str == "layer":
-                fl = len(obj.frames)
-                state["frames"] = [{} for _ in range(fl)]
-            if type_str == "frame":
-                sl = len(obj.strokes)
-                state["strokes"] = [{} for _ in range(sl)]
-            if type_str == "stroke":
-                v_color = get_stroke_vertex_color(obj)
-                state["vertex_color"] = v_color
-
-        if type(context.active_object.data) is bpy.types.GreasePencil:
-            gp_data = context.active_object.data
-            self.current_gp_data = gp_data
-            state = {
-                "layers": [{"tag": util.random_name(8)
-                            } for _ in range(len(gp_data.layers))]
-            }
-            util.gp_licker(gp_data, _save, state)
-            self.state = state
-            # print(state)
-            return state
-
-    def load(self, context):
-        def _load(state: dict, obj, type_str: str):
-            if type_str == "layer":
-                pass
-            if type_str == "frame":
-                pass
-            if type_str == "stroke":
-                v_color = state["vertex_color"]
-                # print("load", v_color)
-                for i, point in enumerate(obj.points):
-                    point.vertex_color = v_color[i]
-
-        if type(context.active_object.data) is bpy.types.GreasePencil:
-            gp_data = context.active_object.data
-            self.current_gp_data = gp_data
-            util.gp_licker(gp_data, _load, self.state)
-
-    def update(self, context):
-        if type(context.active_object.data) is bpy.types.GreasePencil:
-            gp_data = context.active_object.data
-            for layer in gp_data.layers:
-                for frame in layer.frames:
-                    rainbow_strokes(frame.strokes)
-
-    def cache_clear(self):
-        print(rainbow.cache_info())
-        rainbow.cache_clear()
-        print(rainbow.cache_info())
-
-    def reset(self):
-        del self.state
-        del self.current_gp_data

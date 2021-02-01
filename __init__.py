@@ -128,6 +128,14 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
 
     rso = rainbow_strokes.RainbowStrokeObject()
 
+    bpy.types.Scene.rainbowOpacity_prop_float = bpy.props.FloatProperty(
+        name="rainbow_opacity",
+        description="rainbowStrokeの透明度",
+        default=0.75,
+        min=0.0,
+        max=1.0
+    )
+
     @classmethod
     def is_running(cls):
         # モーダルモード中はTrue
@@ -142,8 +150,8 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
                     interval, window=context.window
                 )
             # モーダルモードへの移行
-            context.window_manager.modal_handler_add(self)
             self.rso.init(context)
+            context.window_manager.modal_handler_add(self)
 
     def __handle_remove(self, context):
         if self.is_running():
@@ -151,28 +159,24 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
             context.window_manager.event_timer_remove(
                 NP_GPN_OT_RainbowStrokes.__timer)
             NP_GPN_OT_RainbowStrokes.__timer = None
-
             self.rso.clear()
 
     def modal(self, context, event):
         # op_cls = NP_GPN_OT_RainbowStrokes
-
         # エリアを再描画
         if context.area:
             context.area.tag_redraw()
-
         if not self.is_running():
             return {'FINISHED'}
-
         # タイマーイベントが来た時にする処理
         if event.type == 'TIMER':
             try:
-                self.rso.update()
-            except AttributeError:
+                self.rso.update(
+                    opacity=context.scene.rainbowOpacity_prop_float)
+            except (AttributeError, ReferenceError):
                 # モーダルモードを終了
                 self.__handle_remove(context)
                 return {'FINISHED'}
-
         return {'PASS_THROUGH'}
 
     def invoke(self, context, event):
@@ -225,6 +229,10 @@ class NP_GPN_PT_GPencilNormalizer(bpy.types.Panel):
             layout.operator(
                 NP_GPN_OT_RainbowStrokes.bl_idname,
                 text="stop", icon='PAUSE')
+
+        layout.prop(context.scene,
+                    "rainbowOpacity_prop_float",
+                    text="rainbow opacity")
         # ストロークサンプリング機能
         layout.label(text=translation("Normalize strokes")+":")
         layout.operator(
@@ -234,19 +242,6 @@ class NP_GPN_PT_GPencilNormalizer(bpy.types.Panel):
         layout.operator(
             NP_GPN_OT_GPencilStrokeCountNormalizer.bl_idname,
             text=translation("Normalize strokes"))
-
-
-# def menu_fn(self, context):
-#     self.layout.separator()
-#     self.layout.operator(
-#         NP_GPN_OT_GPencilStrokeCountResampler.bl_idname,
-#         text=translation("Sampling strokes")
-#     )
-#     self.layout.operator(
-#         NP_GPN_OT_GPencilStrokeCountNormalizer.bl_idname,
-#         text=translation("Normalize strokes")
-#     )
-#     self.layout.operator(NP_GPN_OT_RainbowStrokes.bl_idname)
 
 
 classes = [
@@ -260,7 +255,6 @@ classes = [
 def register():
     for c in classes:
         bpy.utils.register_class(c)
-    # types.VIEW3D_PT_tools_grease_pencil_interpolate.append(menu_fn)
 
     # 翻訳辞書の登録
     bpy.app.translations.register(__name__, translation_dict)
@@ -269,7 +263,7 @@ def register():
 def unregister():
     # 翻訳辞書の登録解除
     bpy.app.translations.unregister(__name__)
-    # types.VIEW3D_PT_tools_grease_pencil_interpolate.remove(menu_fn)
+
     for c in classes:
         bpy.utils.unregister_class(c)
 
