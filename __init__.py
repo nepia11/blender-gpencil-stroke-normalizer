@@ -49,11 +49,12 @@ class NP_GPN_OT_GPencilStrokeCountResampler(types.Operator):
     amount = props.IntProperty(
         name=translation("number of points"),
         default=100,
-        min=1,
+        min=2,
     )
 
     # メニューを実行したときに呼ばれるメソッド
     def execute(self, context):
+        context.scene.gpn_StrokeCountResampler_is_running = True
         # context.active_object.data = data.grease_pencils['Stroke']
         gp_data = context.active_object.data
         result_count = self.amount
@@ -65,7 +66,7 @@ class NP_GPN_OT_GPencilStrokeCountResampler(types.Operator):
         select_state.load()
 
         self.report({"INFO"}, "done stroke resample")
-
+        context.scene.gpn_StrokeCountResampler_is_running = False
         return {"FINISHED"}
 
 
@@ -128,14 +129,6 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
 
     rso = rainbow_strokes.RainbowStrokeObject()
 
-    bpy.types.Scene.rainbowOpacity_prop_float = bpy.props.FloatProperty(
-        name="rainbow_opacity",
-        description="rainbowStrokeの透明度",
-        default=0.75,
-        min=0.0,
-        max=1.0
-    )
-
     @classmethod
     def is_running(cls):
         # モーダルモード中はTrue
@@ -168,11 +161,15 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
             context.area.tag_redraw()
         if not self.is_running():
             return {'FINISHED'}
+
+        _a = context.scene.gpn_StrokeCountResampler_is_running
+        _b = context.scene.gpn_StrokeCountNormalizer_is_running
+        gpn_ops_is_running = _a or _b
         # タイマーイベントが来た時にする処理
-        if event.type == 'TIMER':
+        if event.type == 'TIMER' and not gpn_ops_is_running:
             try:
                 self.rso.update(
-                    opacity=context.scene.rainbowOpacity_prop_float)
+                    opacity=context.scene.gpn_rainbowStroke_opacity)
             except (AttributeError, ReferenceError):
                 # モーダルモードを終了
                 self.__handle_remove(context)
@@ -201,7 +198,7 @@ class NP_GPN_PT_GPencilNormalizer(bpy.types.Panel):
     bl_label = "GPencil Normalizer"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "GPSN"
+    bl_category = "GPN"
     # bl_context = "objectmode"
 
     # 本クラスの処理が実行可能かを判定する
@@ -231,7 +228,7 @@ class NP_GPN_PT_GPencilNormalizer(bpy.types.Panel):
                 text="stop", icon='PAUSE')
 
         layout.prop(context.scene,
-                    "rainbowOpacity_prop_float",
+                    "gpn_rainbowStroke_opacity",
                     text="rainbow opacity")
         # ストロークサンプリング機能
         layout.label(text=translation("Normalize strokes")+":")
@@ -242,6 +239,23 @@ class NP_GPN_PT_GPencilNormalizer(bpy.types.Panel):
         layout.operator(
             NP_GPN_OT_GPencilStrokeCountNormalizer.bl_idname,
             text=translation("Normalize strokes"))
+
+
+def init_props():
+    scene = bpy.types.Scene
+    scene.gpn_rainbowStroke_opacity = bpy.props.FloatProperty(
+        name="rainbow_opacity",
+        description="rainbowStrokeの透明度",
+        default=0.75,
+        min=0.0,
+        max=1.0
+    )
+    scene.gpn_StrokeCountResampler_is_running = bpy.props.BoolProperty(
+        default=False
+    )
+    scene.gpn_StrokeCountNormalizer_is_running = bpy.props.BoolProperty(
+        default=False
+    )
 
 
 classes = [
@@ -256,6 +270,7 @@ def register():
     for c in classes:
         bpy.utils.register_class(c)
 
+    init_props()
     # 翻訳辞書の登録
     bpy.app.translations.register(__name__, translation_dict)
 

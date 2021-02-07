@@ -82,6 +82,7 @@ class RainbowStrokeObject:
             bpy.ops.object.mode_set(mode="OBJECT")
         # もとのオブジェクトを取得、複製
         orig_obj = context.active_object
+        orig_obj.select_set(True)
         print("orig_obj:", orig_obj)
         orig_name = orig_obj.name
         temp_name = util.random_name(8)
