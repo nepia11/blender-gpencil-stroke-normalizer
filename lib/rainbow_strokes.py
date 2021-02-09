@@ -113,13 +113,13 @@ class RainbowStrokeObject:
 
         bpy.ops.object.mode_set(mode=orig_mode)
 
-    def update(self, opacity=0.5):
+    def update(self, opacity=0.5, emphasize_index=0):
         old_data = self.rs_obj.data
         new_data = self.orig_obj.data.copy()
         new_data.name = self.temp_name + "_prev"
         for layer in new_data.layers:
             layer.opacity *= opacity
-        self.colorize(new_data)
+        self.colorize(new_data, emphasize_index)
         self.rs_obj.data = new_data
         bpy.data.batch_remove([old_data.id_data])
 
@@ -137,8 +137,12 @@ class RainbowStrokeObject:
         del self.temp_name
 
     @staticmethod
-    def colorize(gp_data: bpy.types.GreasePencil):
-        # gp_data = self.rs_obj.data
+    def colorize(gp_data: bpy.types.GreasePencil, emphasize_index=0):
         for layer in gp_data.layers:
             for frame in layer.frames:
                 rainbow_strokes(frame.strokes)
+                if len(frame.strokes)-1 > emphasize_index:
+                    points = frame.strokes[emphasize_index].points
+                    color = [0, 0, 0, 0]
+                    for point in points:
+                        point.vertex_color = color

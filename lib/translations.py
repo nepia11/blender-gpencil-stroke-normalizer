@@ -9,6 +9,8 @@ keys = [
     "Provides the ability to arbitrarily adjust the number of points "
     "in a gpencil stroke.",
     "rainbow strokes",
+    "Sorting strokes",
+    "Emphasize index",
 ]
 
 jp = [
@@ -18,8 +20,10 @@ jp = [
     "ストロークを正規化",
     "フレーム間、同一ストロークのポイント数を最大値に合わせる",
 
-    "gpencilのストロークのポイント数を任意に調整する機能を提供します。"
-    "レインボーストローク"
+    "gpencilのストロークのポイント数を任意に調整する機能を提供します。",
+    "レインボーストローク",
+    "ストロークの並び替え",
+    "強調するインデックス",
 ]
 
 translation_dict = {

@@ -165,15 +165,19 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
         _a = context.scene.gpn_StrokeCountResampler_is_running
         _b = context.scene.gpn_StrokeCountNormalizer_is_running
         gpn_ops_is_running = _a or _b
+        emphasize_index = context.scene.gpn_rainbowStroke_emphasize_index
+        opacity = context.scene.gpn_rainbowStroke_opacity
         # タイマーイベントが来た時にする処理
         if event.type == 'TIMER' and not gpn_ops_is_running:
             try:
                 self.rso.update(
-                    opacity=context.scene.gpn_rainbowStroke_opacity)
+                    opacity=opacity,
+                    emphasize_index=emphasize_index)
             except (AttributeError, ReferenceError):
                 # モーダルモードを終了
                 self.__handle_remove(context)
                 return {'FINISHED'}
+
         return {'PASS_THROUGH'}
 
     def invoke(self, context, event):
@@ -213,25 +217,34 @@ class NP_GPN_PT_GPencilNormalizer(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-
         # ranbow strokes
-        layout.label(text=translation("rainbow strokes")+":")
-
+        layout.label(text="rainbow strokes")
         # [開始] / [終了] ボタンを追加
         if not NP_GPN_OT_RainbowStrokes.is_running():
             layout.operator(
                 NP_GPN_OT_RainbowStrokes.bl_idname,
-                text="start", icon='PLAY')
+                text="Start", icon='PLAY')
         else:
             layout.operator(
                 NP_GPN_OT_RainbowStrokes.bl_idname,
-                text="stop", icon='PAUSE')
-
+                text="Stop", icon='PAUSE')
         layout.prop(context.scene,
                     "gpn_rainbowStroke_opacity",
                     text="rainbow opacity")
+        layout.prop(context.scene,
+                    "gpn_rainbowStroke_emphasize_index")
+        layout.separator()
+        # ストローク並べ替え
+        layout.label(text="Sorting strokes")
+        arrange_props = [("TOP", "Bring to Front"), ("UP", "Bring Forward"),
+                         ("DOWN", "Send Backward"), ("BOTTOM", "Send to Back")]
+        for prop in arrange_props:
+            op = layout.operator("gpencil.stroke_arrange",
+                                 text=translation(prop[1]))
+            op.direction = prop[0]
+        layout.separator()
         # ストロークサンプリング機能
-        layout.label(text=translation("Normalize strokes")+":")
+        layout.label(text=translation("Normalize strokes"))
         layout.operator(
             NP_GPN_OT_GPencilStrokeCountResampler.bl_idname,
             text=translation("Sampling strokes")
@@ -249,6 +262,11 @@ def init_props():
         default=0.75,
         min=0.0,
         max=1.0
+    )
+    scene.gpn_rainbowStroke_emphasize_index = bpy.props.IntProperty(
+        name="Emphasize index",
+        description="強調するストロークのインデックス",
+        min=0
     )
     scene.gpn_StrokeCountResampler_is_running = bpy.props.BoolProperty(
         default=False
