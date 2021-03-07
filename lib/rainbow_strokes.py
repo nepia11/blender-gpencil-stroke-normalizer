@@ -82,59 +82,53 @@ class RainbowStrokeObject:
             bpy.ops.object.mode_set(mode="OBJECT")
         # もとのオブジェクトを取得、複製
         orig_obj = context.active_object
-        orig_obj.select_set(True)
-        print("orig_obj:", orig_obj)
-        orig_name = orig_obj.name
-        temp_name = util.random_name(8)
-        orig_obj.name = temp_name
-        bpy.ops.object.duplicate_move()
-        rs_obj = context.collection.objects[temp_name + ".001"]
+        new_name = orig_obj.name+".gpnRsPrev"
+        rs_obj = util.object_duplicate_helper(orig_obj, new_name)
         # ロックしておく
         rs_obj.hide_select = True
-        # 名前を戻しておく
-        orig_obj.name = orig_name
+        rs_obj.show_in_front = True
 
         self.colorize(rs_obj.data)
-        self.orig_obj = orig_obj
-        self.rs_obj = rs_obj
-        self.temp_name = temp_name
-        # deselect
-        print("scene.objects", list(context.scene.objects))
-        for _scene_obj in context.scene.objects:
-            _scene_obj.select_set(False)
-
-        print("scene.objects", list(context.scene.objects))
-
-        # 選択状態をもとに戻す
-        # for _obj in selects:
-        #     _obj.select_set(True)
-        orig_obj.select_set(True)
+        # self.orig_obj = orig_obj
+        # self.rs_obj = rs_obj
+        self.orig_obj_name = orig_obj.name
+        self.rs_obj_name = rs_obj.name
+        # rs_obj.select_set(False)
+        # orig_obj.select_set(True)
         context.view_layer.objects.active = orig_obj
 
         bpy.ops.object.mode_set(mode=orig_mode)
 
     def update(self, opacity=0.5, emphasize_index=0):
-        old_data = self.rs_obj.data
-        new_data = self.orig_obj.data.copy()
-        new_data.name = self.temp_name + "_prev"
+        # old_data = self.rs_obj.data
+        old_data = bpy.data.objects[self.rs_obj_name].data
+        old_data.name = "trash"
+        # new_data = self.orig_obj.data.copy()
+        new_data = bpy.data.objects[self.orig_obj_name].data.copy()
+        new_data.name = self.rs_obj_name
         for layer in new_data.layers:
             layer.opacity *= opacity
         self.colorize(new_data, emphasize_index)
-        self.rs_obj.data = new_data
+        # self.rs_obj.data = new_data
+        bpy.data.objects[self.rs_obj_name].data = new_data
         bpy.data.batch_remove([old_data.id_data])
 
     def clear(self):
-        print("clear rso")
-        bpy.ops.object.mode_set(mode="OBJECT")
         try:
-            bpy.data.batch_remove([self.rs_obj.data.id_data])
-            bpy.ops.object.delete({"selected_objects": [self.rs_obj]})
-        except (ReferenceError, AttributeError):
+            print("clear rso")
+            bpy.ops.object.mode_set(mode="OBJECT")
+            print("clean id_data")
+            remove_obj = bpy.data.objects[self.rs_obj_name]
+            bpy.data.batch_remove([remove_obj.data])
+            print("clean id_data success")
+            bpy.ops.object.delete({"selected_objects": [remove_obj]})
+            print("clean object success")
+            pass
+        except (KeyError):
             #  見つからないならしょうがない。それ以外のときは例外を見たい
             pass
-        del self.orig_obj
-        del self.rs_obj
-        del self.temp_name
+        del self.orig_obj_name
+        del self.rs_obj_name
 
     @staticmethod
     def colorize(gp_data: bpy.types.GreasePencil, emphasize_index=0):

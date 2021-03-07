@@ -7,6 +7,24 @@ def random_name(n: int) -> string:
     return "".join(random.choices(string.ascii_letters + string.digits, k=n))
 
 
+def object_duplicate_helper(
+        obj: bpy.types.Object, name: str) -> bpy.types.Object:
+    """
+    オブジェクトに任意の名前をつけて複製するヘルパー　複製したオブジェクトを返す
+    """
+    _mode = bpy.context.mode
+    temp_name = random_name(10)
+    orig_name = obj.name
+    obj.name = temp_name
+    bpy.ops.object.duplicate({"selected_objects": [obj]})
+    obj.name = orig_name
+    new_obj = bpy.data.objects[temp_name + ".001"]
+    new_obj.name = name
+    bpy.ops.object.mode_set(mode=_mode)
+    new_obj.select_set(False)
+    return new_obj
+
+
 def gp_licker(
         gp_data: bpy.types.GreasePencil,
         func,

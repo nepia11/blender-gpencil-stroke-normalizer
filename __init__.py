@@ -29,7 +29,6 @@ bl_info = {
             "Provides the ability to arbitrarily adjust the number of points "
             "in a gpencil stroke.",
     "warning": "",
-    "support": "TESTING",
     "wiki_url": "",
     "tracker_url":
         "https://github.com/nepia11/blender-gpencil-stroke-normalizer/issues",
@@ -114,10 +113,8 @@ class NP_GPN_OT_GPencilStrokeCountNormalizer(types.Operator):
 
 
 class NP_GPN_OT_RainbowStrokes(types.Operator):
-    """
-    timer eventについて参照
-    https://colorful-pico.net/introduction-to-addon-development-in-blender/2.8/html/chapter_03/03_Handle_Timer_Event.html
-    """
+    # timer eventについて参照
+    # https://colorful-pico.net/introduction-to-addon-development-in-blender/2.8/html/chapter_03/03_Handle_Timer_Event.html
 
     bl_idname = "gpencil.np_rainbow_strokes"
     bl_label = "rainbow strokes"
@@ -126,6 +123,8 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
 
     # タイマのハンドラ
     __timer = None
+
+    interval = 0.2
 
     rso = rainbow_strokes.RainbowStrokeObject()
 
@@ -137,7 +136,7 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
     def __handle_add(self, context):
         if not self.is_running():
             # タイマを登録
-            interval = 0.2
+            interval = self.interval
             NP_GPN_OT_RainbowStrokes.__timer = \
                 context.window_manager.event_timer_add(
                     interval, window=context.window
@@ -162,21 +161,20 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
         if not self.is_running():
             return {'FINISHED'}
 
-        _a = context.scene.gpn_StrokeCountResampler_is_running
-        _b = context.scene.gpn_StrokeCountNormalizer_is_running
-        gpn_ops_is_running = _a or _b
         emphasize_index = context.scene.gpn_rainbowStroke_emphasize_index
         opacity = context.scene.gpn_rainbowStroke_opacity
         # タイマーイベントが来た時にする処理
-        if event.type == 'TIMER' and not gpn_ops_is_running:
+        if event.type == 'TIMER':
             try:
                 self.rso.update(
                     opacity=opacity,
                     emphasize_index=emphasize_index)
-            except (AttributeError, ReferenceError):
+            except (KeyError):
                 # モーダルモードを終了
+                print("key error")
                 self.__handle_remove(context)
                 return {'FINISHED'}
+                # return {'CANCELLED'}
 
         return {'PASS_THROUGH'}
 
@@ -194,7 +192,7 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
                 self.__handle_remove(context)
                 return {'FINISHED'}
         else:
-            return {'CANCELLED'}
+            return {'FINISHED'}
 
 
 class NP_GPN_PT_GPencilNormalizer(bpy.types.Panel):
@@ -203,7 +201,6 @@ class NP_GPN_PT_GPencilNormalizer(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "GPN"
-    # bl_context = "objectmode"
 
     # 本クラスの処理が実行可能かを判定する
     @classmethod
@@ -267,12 +264,6 @@ def init_props():
         name="Emphasize index",
         description="強調するストロークのインデックス",
         min=0
-    )
-    scene.gpn_StrokeCountResampler_is_running = bpy.props.BoolProperty(
-        default=False
-    )
-    scene.gpn_StrokeCountNormalizer_is_running = bpy.props.BoolProperty(
-        default=False
     )
 
 
