@@ -62,7 +62,6 @@ class NP_GPN_OT_GPencilStrokeCountResampler(types.Operator):
 
     # メニューを実行したときに呼ばれるメソッド
     def execute(self, context):
-        context.scene.gpn_StrokeCountResampler_is_running = True
         # context.active_object.data = data.grease_pencils['Stroke']
         gp_data = context.active_object.data
         result_count = self.amount
@@ -74,7 +73,6 @@ class NP_GPN_OT_GPencilStrokeCountResampler(types.Operator):
         select_state.load()
 
         self.report({"INFO"}, "done stroke resample")
-        context.scene.gpn_StrokeCountResampler_is_running = False
         return {"FINISHED"}
 
 

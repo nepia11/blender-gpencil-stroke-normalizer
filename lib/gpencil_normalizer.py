@@ -53,9 +53,7 @@ def calc_frames_strokes_max_count(gp_frames: types.GPencilFrames) -> ([int]):
     """
     frame_len = len(gp_frames)
 
-    logger.debug(
-        "#calc_frames_strokes_max_count():\n",
-        "frame_len :", frame_len)
+    logger.debug(f"#calc_frames_strokes_max_count():->frame_len: {frame_len}")
 
     if frame_len == 0:
         return 0
@@ -139,7 +137,7 @@ class GpSelectState:
 
         def _save(state, obj):
             logger.debug("## start _save()")
-            logger.debug("state,obj", state, obj)
+            logger.debug(f"state,obj{state},{obj}")
             obj_type = type(obj)
             if obj_type is types.GPencilLayer:
                 logger.debug("### init state[frames]")
@@ -154,7 +152,7 @@ class GpSelectState:
 
             state["select"] = obj.select
             state["tag"] = random_name(8)
-            logger.debug("### state[select]:", state, obj.select)
+            logger.debug(f"### state[select]:{state},{obj.select}")
 
         logger.debug("# start save() loop")
         self._lick(state, _save)
@@ -185,7 +183,7 @@ class GpSelectState:
             _type = type(obj)
             is_stroke = _type is types.GPencilStroke
             is_valid = state["select"] and is_stroke
-            # logger.debug("state select", state["select"], _type, is_type)
+            # logger.debug(f"state select:{state["select"]} {_type} {is_type}")
             if _type is types.GPencilFrame:
                 self.context.scene.frame_current = state["frame_number"]
             if is_valid:

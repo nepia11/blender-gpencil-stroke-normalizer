@@ -1,7 +1,7 @@
 import random
 import string
 import bpy
-from logging import getLogger, StreamHandler, Formatter, FileHandler, DEBUG
+from logging import getLogger, StreamHandler, Formatter, FileHandler, handlers, DEBUG
 
 
 def setup_logger(log_folder: str, modname=__name__):
@@ -17,10 +17,13 @@ def setup_logger(log_folder: str, modname=__name__):
         sh.setFormatter(formatter)
         logger.addHandler(sh)
 
-        fh = FileHandler(log_folder)  # fh = file handler
+        # fh = FileHandler(log_folder)  # fh = file handler
+        fh = handlers.RotatingFileHandler(
+            log_folder, maxBytes=500000, backupCount=3)
         fh.setLevel(DEBUG)
         fh_formatter = Formatter(
-            '%(asctime)s - %(filename)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s')
+            "%(asctime)s - %(filename)s - %(name)s"
+            " - %(lineno)d - %(levelname)s - %(message)s")
         fh.setFormatter(fh_formatter)
         logger.addHandler(fh)
     return logger

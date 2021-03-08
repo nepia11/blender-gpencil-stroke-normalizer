@@ -50,7 +50,7 @@ def colorize_stroke(
 
     # すでに同色に変更済みのストロークを無視する
     test_value = list(points[n].vertex_color)
-    # logger.debug("testvalue: ", test_value, "color: ", test_color)
+    # logger.debug(f"testvalue:{test_value}, color:{test_color}")
     if test_value == color:
         return 0
 
@@ -69,7 +69,7 @@ def rainbow_strokes(strokes: bpy.types.GPencilStrokes):
     """
     n = [colorize_stroke(stroke, i, True) for i, stroke in enumerate(strokes)]
     return n
-    # logger.debug("update:", sum(n))
+    # logger.debug(f"update:{sum(n)}")
     # logger.debug(rainbow.cache_info())
 
 
