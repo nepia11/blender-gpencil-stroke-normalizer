@@ -1,15 +1,24 @@
+# blenderのreload scripts対応
 if not("bpy" in locals()):
     from .lib import translations
     from .lib import gpencil_normalizer
     from .lib import rainbow_strokes
+    from .lib import util
 else:
     import imp
     imp.reload(translations)
     imp.reload(gpencil_normalizer)
     imp.reload(rainbow_strokes)
+    imp.reload(util)
 
 import bpy
 from bpy import props, types
+import datetime
+
+# log周りの設定
+log_folder = '{0}.log'.format(datetime.date.today())
+logger = util.setup_logger(log_folder, modname=__name__)
+logger.debug('hello')
 
 GpSelectState = gpencil_normalizer.GpSelectState
 stroke_count_resampler = gpencil_normalizer.stroke_count_resampler
@@ -171,7 +180,7 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
                     emphasize_index=emphasize_index)
             except (KeyError):
                 # モーダルモードを終了
-                print("key error")
+                logger.debug("key error")
                 self.__handle_remove(context)
                 return {'FINISHED'}
                 # return {'CANCELLED'}

@@ -5,12 +5,11 @@ import numpy as np
 from bpy import ops, types
 import mathutils
 
-DEBUG = False
+# log
+from logging import getLogger
 
-
-def debug_print(*args):
-    if DEBUG:
-        print(*args)
+logger = getLogger(__name__)
+logger.debug("hello")
 
 
 # 2つのベクトルから長さを求める
@@ -54,7 +53,7 @@ def calc_frames_strokes_max_count(gp_frames: types.GPencilFrames) -> ([int]):
     """
     frame_len = len(gp_frames)
 
-    debug_print(
+    logger.debug(
         "#calc_frames_strokes_max_count():\n",
         "frame_len :", frame_len)
 
@@ -139,28 +138,28 @@ class GpSelectState:
         state["frame_current"] = self.context.scene.frame_current
 
         def _save(state, obj):
-            debug_print("## start _save()")
-            debug_print("state,obj", state, obj)
+            logger.debug("## start _save()")
+            logger.debug("state,obj", state, obj)
             obj_type = type(obj)
             if obj_type is types.GPencilLayer:
-                debug_print("### init state[frames]")
+                logger.debug("### init state[frames]")
                 state["frames"] = [{} for i in range(len(obj.frames))]
                 max_counts = calc_frames_strokes_max_count(obj.frames)
                 state["max_counts"] = max_counts
 
             elif obj_type is types.GPencilFrame:
-                debug_print("### init state[strokes]")
+                logger.debug("### init state[strokes]")
                 state["strokes"] = [{} for i in range(len(obj.strokes))]
                 state["frame_number"] = obj.frame_number
 
             state["select"] = obj.select
             state["tag"] = random_name(8)
-            debug_print("### state[select]:", state, obj.select)
+            logger.debug("### state[select]:", state, obj.select)
 
-        debug_print("# start save() loop")
+        logger.debug("# start save() loop")
         self._lick(state, _save)
         self.state = state
-        debug_print("# end state")
+        logger.debug("# end state")
         # pprint.pprint(self.state)
         return state
 
@@ -180,13 +179,13 @@ class GpSelectState:
 
     # この機能はこいつの責務なのか？
     def apply(self, result_count):
-        debug_print(self.state)
+        logger.debug(self.state)
 
         def _apply(state, obj):
             _type = type(obj)
             is_stroke = _type is types.GPencilStroke
             is_valid = state["select"] and is_stroke
-            # debug_print("state select", state["select"], _type, is_type)
+            # logger.debug("state select", state["select"], _type, is_type)
             if _type is types.GPencilFrame:
                 self.context.scene.frame_current = state["frame_number"]
             if is_valid:

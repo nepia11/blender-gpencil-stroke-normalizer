@@ -4,6 +4,12 @@ import numpy as np
 from functools import cache
 from . import util
 
+# log
+from logging import getLogger
+
+logger = getLogger(__name__)
+logger.debug("hello")
+
 
 # 関数の返り値をキャッシュしてくれるらしい
 @cache
@@ -44,7 +50,7 @@ def colorize_stroke(
 
     # すでに同色に変更済みのストロークを無視する
     test_value = list(points[n].vertex_color)
-    # print("testvalue: ", test_value, "color: ", test_color)
+    # logger.debug("testvalue: ", test_value, "color: ", test_color)
     if test_value == color:
         return 0
 
@@ -63,8 +69,8 @@ def rainbow_strokes(strokes: bpy.types.GPencilStrokes):
     """
     n = [colorize_stroke(stroke, i, True) for i, stroke in enumerate(strokes)]
     return n
-    # print("update:", sum(n))
-    # print(rainbow.cache_info())
+    # logger.debug("update:", sum(n))
+    # logger.debug(rainbow.cache_info())
 
 
 def get_stroke_vertex_color(stroke: bpy.types.GPencilStroke) -> list:
@@ -115,14 +121,14 @@ class RainbowStrokeObject:
 
     def clear(self):
         try:
-            print("clear rso")
+            logger.debug("clear rso")
             bpy.ops.object.mode_set(mode="OBJECT")
-            print("clean id_data")
+            logger.debug("clean id_data")
             remove_obj = bpy.data.objects[self.rs_obj_name]
             bpy.data.batch_remove([remove_obj.data])
-            print("clean id_data success")
+            logger.debug("clean id_data success")
             bpy.ops.object.delete({"selected_objects": [remove_obj]})
-            print("clean object success")
+            logger.debug("clean object success")
             pass
         except (KeyError):
             #  見つからないならしょうがない。それ以外のときは例外を見たい
