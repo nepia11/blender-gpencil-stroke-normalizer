@@ -6,10 +6,13 @@ name = "pypi"
 [packages]
 "fake-bpy-module-2.83" = "*"
 flake8 = "*"
-autopep8 = "*"
 numpy = "*"
+black = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.9"
+
+[pipenv]
+allow_prereleases = true

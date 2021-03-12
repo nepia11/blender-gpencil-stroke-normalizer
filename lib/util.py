@@ -1,7 +1,7 @@
 import random
 import string
 import bpy
-from logging import getLogger, StreamHandler, Formatter, FileHandler, handlers, DEBUG
+from logging import getLogger, StreamHandler, Formatter, handlers, DEBUG
 
 
 def setup_logger(log_folder: str, modname=__name__):
@@ -12,18 +12,17 @@ def setup_logger(log_folder: str, modname=__name__):
     if not logger.hasHandlers():
         sh = StreamHandler()
         sh.setLevel(DEBUG)
-        formatter = Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         sh.setFormatter(formatter)
         logger.addHandler(sh)
 
         # fh = FileHandler(log_folder)  # fh = file handler
-        fh = handlers.RotatingFileHandler(
-            log_folder, maxBytes=500000, backupCount=3)
+        fh = handlers.RotatingFileHandler(log_folder, maxBytes=500000, backupCount=2)
         fh.setLevel(DEBUG)
         fh_formatter = Formatter(
             "%(asctime)s - %(filename)s - %(name)s"
-            " - %(lineno)d - %(levelname)s - %(message)s")
+            " - %(lineno)d - %(levelname)s - %(message)s"
+        )
         fh.setFormatter(fh_formatter)
         logger.addHandler(fh)
     return logger
@@ -36,8 +35,7 @@ def random_name(n: int) -> string:
     return "".join(random.choices(string.ascii_letters + string.digits, k=n))
 
 
-def object_duplicate_helper(
-        obj: bpy.types.Object, name: str) -> bpy.types.Object:
+def object_duplicate_helper(obj: bpy.types.Object, name: str) -> bpy.types.Object:
     """
     オブジェクトに任意の名前をつけて複製するヘルパー　複製したオブジェクトを返す
     """
@@ -54,10 +52,7 @@ def object_duplicate_helper(
     return new_obj
 
 
-def gp_licker(
-        gp_data: bpy.types.GreasePencil,
-        func,
-        state={}):
+def gp_licker(gp_data: bpy.types.GreasePencil, func, state={}):
 
     if type(gp_data) is not bpy.types.GreasePencil:
         logger.debug("not gpencil")
@@ -68,7 +63,4 @@ def gp_licker(
         for fi, frame in enumerate(layer.frames):
             func(state["layers"][li]["frames"][fi], frame, "frame")
             for si, stroke in enumerate(frame.strokes):
-                func(
-                    state["layers"][li]["frames"][fi]["strokes"][si],
-                    stroke,
-                    "stroke")
+                func(state["layers"][li]["frames"][fi]["strokes"][si], stroke, "stroke")

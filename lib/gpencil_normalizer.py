@@ -13,21 +13,17 @@ logger.debug("hello")
 
 
 # 2つのベクトルから長さを求める
-def calc_vector_length(
-        a: mathutils.Vector, b: mathutils.Vector) -> float:
-    vec = b-a
+def calc_vector_length(a: mathutils.Vector, b: mathutils.Vector) -> float:
+    vec = b - a
     return vec.length
 
 
 # ストロークの長さとポイント数を計算して返す これ分解したほうが良いかもな
-def calc_stroke_length_and_point(
-        gp_stroke: types.GPencilStroke) -> (float, int):
+def calc_stroke_length_and_point(gp_stroke: types.GPencilStroke) -> (float, int):
     vectors = [p.co for p in gp_stroke.points]
     point_count: int = len(vectors)
     norms = [
-        calc_vector_length(
-            vectors[i], vectors[i + 1]
-        ) for i in range(point_count - 1)
+        calc_vector_length(vectors[i], vectors[i + 1]) for i in range(point_count - 1)
     ]
     length = sum(norms)
     return length, point_count
@@ -90,8 +86,7 @@ def calc_offset(src_len: float, segment_len: float, point_count: int) -> float:
 
 # ストロークをポイント数でサンプリングする
 def stroke_count_resampler(
-        gp_stroke: types.GPencilStroke,
-        result_count: int
+    gp_stroke: types.GPencilStroke, result_count: int
 ) -> (int, float, int, int):
     # 単純にresult_countで割るとポイント数に1,2程度の誤差が起きるのでオフセット値をつける
     # 1.5でうまく行くことはわかったけど理由がわからない　ほんとに何？？？
@@ -125,13 +120,11 @@ class GpSelectState:
             for fi, frame in enumerate(layer.frames):
                 func(state["layers"][li]["frames"][fi], frame)
                 for si, stroke in enumerate(frame.strokes):
-                    func(state["layers"][li]["frames"]
-                         [fi]["strokes"][si], stroke)
+                    func(state["layers"][li]["frames"][fi]["strokes"][si], stroke)
 
     def save(self) -> dict:
         # state = {"layers": [{"select": False}]*len(self.layers)}
-        state = {"layers": [{"select": False}
-                            for i in range(len(self.layers))]}
+        state = {"layers": [{"select": False} for i in range(len(self.layers))]}
         # 現在のフレームを保存しておく
         state["frame_current"] = self.context.scene.frame_current
 
