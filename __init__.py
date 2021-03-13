@@ -15,9 +15,12 @@ else:
 import bpy
 from bpy import props, types
 import datetime
+import os
+
 
 # log周りの設定
-log_folder = "{0}.log".format(datetime.date.today())
+scripts_dir = os.path.dirname(os.path.abspath(__file__))
+log_folder = os.path.join(scripts_dir, f"{datetime.date.today()}.log")
 logger = util.setup_logger(log_folder, modname=__name__)
 logger.debug("hello")
 
@@ -165,10 +168,11 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
         # タイマーイベントが来た時にする処理
         if event.type == "TIMER":
             try:
+                # logger.debug("try modal")qq
                 self.rso.update(opacity=opacity, emphasize_index=emphasize_index)
-            except (KeyError):
+            except (KeyError) as e:
                 # モーダルモードを終了
-                logger.debug("key error")
+                logger.exception(f"{e}")
                 self.__handle_remove(context)
                 return {"FINISHED"}
                 # return {'CANCELLED'}
@@ -177,7 +181,7 @@ class NP_GPN_OT_RainbowStrokes(types.Operator):
 
     def invoke(self, context, event):
         op_cls = NP_GPN_OT_RainbowStrokes
-
+        logger.debug("invoke rainbowstrokes")
         if context.area.type == "VIEW_3D":
             if not op_cls.is_running():
                 # モーダルモードを開始

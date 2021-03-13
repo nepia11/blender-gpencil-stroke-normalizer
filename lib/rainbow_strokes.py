@@ -1,18 +1,12 @@
 import bpy
 import colorsys
 import numpy as np
-from functools import cache
 from . import util
 
-# log
-from logging import getLogger
-
-logger = getLogger(__name__)
+logger = util.getLogger(__name__)
 logger.debug("hello")
 
 
-# 関数の返り値をキャッシュしてくれるらしい
-@cache
 def rainbow(index: int) -> [float, float, float, float]:
     h, s, v, a = 1.0, 0.2, 1.0, 1.0
     s_collection = (1.0, 0.8, 0.6, 0.4)
@@ -32,9 +26,8 @@ def rainbow(index: int) -> [float, float, float, float]:
 
 
 def colorize_stroke(
-        stroke: bpy.types.GPencilStroke,
-        index: int,
-        visible_start: bool = True):
+    stroke: bpy.types.GPencilStroke, index: int, visible_start: bool = True
+):
     """
     参照方法メモ \n
     lines.frames[0].strokes[0].points[0].vertex_color=(1,0,0,1)
@@ -88,19 +81,17 @@ class RainbowStrokeObject:
             bpy.ops.object.mode_set(mode="OBJECT")
         # もとのオブジェクトを取得、複製
         orig_obj = context.active_object
-        new_name = orig_obj.name+".gpnRsPrev"
+        new_name = orig_obj.name + ".gpnRsPrev"
         rs_obj = util.object_duplicate_helper(orig_obj, new_name)
         # ロックしておく
         rs_obj.hide_select = True
         rs_obj.show_in_front = True
 
         self.colorize(rs_obj.data)
-        # self.orig_obj = orig_obj
-        # self.rs_obj = rs_obj
         self.orig_obj_name = orig_obj.name
+        # https://docs.blender.org/api/current/info_gotcha.html#undo-redo
+        # 名前で参照するより直接参照を持ったほうが負荷が少ないんだろうけど、undoした時にバグるのでしょうがなく名前で参照するようにしている
         self.rs_obj_name = rs_obj.name
-        # rs_obj.select_set(False)
-        # orig_obj.select_set(True)
         context.view_layer.objects.active = orig_obj
 
         bpy.ops.object.mode_set(mode=orig_mode)
@@ -141,7 +132,7 @@ class RainbowStrokeObject:
         for layer in gp_data.layers:
             for frame in layer.frames:
                 rainbow_strokes(frame.strokes)
-                if len(frame.strokes)-1 > emphasize_index:
+                if len(frame.strokes) - 1 > emphasize_index:
                     points = frame.strokes[emphasize_index].points
                     color = [0, 0, 0, 0]
                     for point in points:

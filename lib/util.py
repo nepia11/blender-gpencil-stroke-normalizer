@@ -47,6 +47,7 @@ def object_duplicate_helper(obj: bpy.types.Object, name: str) -> bpy.types.Objec
     obj.name = orig_name
     new_obj = bpy.data.objects[temp_name + ".001"]
     new_obj.name = name
+    new_obj.data.name = name
     bpy.ops.object.mode_set(mode=_mode)
     new_obj.select_set(False)
     return new_obj
