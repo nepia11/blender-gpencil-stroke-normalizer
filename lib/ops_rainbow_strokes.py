@@ -153,7 +153,35 @@ class NP_GPN_OT_RainbowStrokes(bpy.types.Operator):
 
     interval = 0.2
 
-    rso = rainbow_strokes.RainbowStrokeObject()
+    __props = []
+
+    rso = RainbowStrokeObject()
+
+    @classmethod
+    def register(cls):
+        """ registerする時にやっときたい処理 あったら勝手に呼ばれるらしい"""
+        scene = bpy.types.Scene
+        append = cls.__props.append
+        scene.gpn_rainbowStroke_opacity = bpy.props.FloatProperty(
+            name="rainbow_opacity",
+            description="rainbowStrokeの透明度",
+            default=0.75,
+            min=0.0,
+            max=1.0,
+        )
+        append(scene.gpn_rainbowStroke_opacity)
+
+        scene.gpn_rainbowStroke_emphasize_index = bpy.props.IntProperty(
+            name="Emphasize index", description="強調するストロークのインデックス", min=0
+        )
+        append(scene.gpn_rainbowStroke_emphasize_index)
+
+    @classmethod
+    def unregister(cls):
+        """ unregisterする時にやっときたい処理 あったら勝手に呼ばれるらしい"""
+        for prop in cls.__props:
+            del prop
+        cls.__props = []
 
     @classmethod
     def is_running(cls):
@@ -217,4 +245,3 @@ class NP_GPN_OT_RainbowStrokes(bpy.types.Operator):
                 return {"FINISHED"}
         else:
             return {"FINISHED"}
-

@@ -1,7 +1,7 @@
 import bpy
 import mathutils
 import numpy as np
-import util
+from . import util
 from bpy import ops, props, types
 
 # log setup
