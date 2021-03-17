@@ -137,3 +137,84 @@ class RainbowStrokeObject:
                     color = [0, 0, 0, 0]
                     for point in points:
                         point.vertex_color = color
+
+
+class NP_GPN_OT_RainbowStrokes(bpy.types.Operator):
+    # timer eventについて参照
+    # https://colorful-pico.net/introduction-to-addon-development-in-blender/2.8/html/chapter_03/03_Handle_Timer_Event.html
+
+    bl_idname = "gpencil.np_rainbow_strokes"
+    bl_label = "rainbow strokes"
+    bl_description = ""
+    bl_options = {"REGISTER", "UNDO"}
+
+    # タイマのハンドラ
+    __timer = None
+
+    interval = 0.2
+
+    rso = rainbow_strokes.RainbowStrokeObject()
+
+    @classmethod
+    def is_running(cls):
+        # モーダルモード中はTrue
+        return True if cls.__timer else False
+
+    def __handle_add(self, context):
+        if not self.is_running():
+            # タイマを登録
+            interval = self.interval
+            NP_GPN_OT_RainbowStrokes.__timer = context.window_manager.event_timer_add(
+                interval, window=context.window
+            )
+            # モーダルモードへの移行
+            self.rso.init(context)
+            context.window_manager.modal_handler_add(self)
+
+    def __handle_remove(self, context):
+        if self.is_running():
+            # タイマの登録を解除
+            context.window_manager.event_timer_remove(NP_GPN_OT_RainbowStrokes.__timer)
+            NP_GPN_OT_RainbowStrokes.__timer = None
+            self.rso.clear()
+
+    def modal(self, context, event):
+        # op_cls = NP_GPN_OT_RainbowStrokes
+        # エリアを再描画
+        if context.area:
+            context.area.tag_redraw()
+        if not self.is_running():
+            return {"FINISHED"}
+
+        emphasize_index = context.scene.gpn_rainbowStroke_emphasize_index
+        opacity = context.scene.gpn_rainbowStroke_opacity
+        # タイマーイベントが来た時にする処理
+        if event.type == "TIMER":
+            try:
+                # logger.debug("try modal")qq
+                self.rso.update(opacity=opacity, emphasize_index=emphasize_index)
+            except (KeyError) as e:
+                # モーダルモードを終了
+                logger.exception(f"{e}")
+                self.__handle_remove(context)
+                return {"FINISHED"}
+                # return {'CANCELLED'}
+
+        return {"PASS_THROUGH"}
+
+    def invoke(self, context, event):
+        op_cls = NP_GPN_OT_RainbowStrokes
+        logger.debug("invoke rainbowstrokes")
+        if context.area.type == "VIEW_3D":
+            if not op_cls.is_running():
+                # モーダルモードを開始
+                self.__handle_add(context)
+                return {"RUNNING_MODAL"}
+            # [終了] ボタンが押された時の処理
+            else:
+                # モーダルモードを終了
+                self.__handle_remove(context)
+                return {"FINISHED"}
+        else:
+            return {"FINISHED"}
+

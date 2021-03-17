@@ -1,15 +1,15 @@
-# import pprint
-from .util import random_name
-
-import numpy as np
-from bpy import ops, types
+import bpy
 import mathutils
+import numpy as np
+import util
+from bpy import ops, props, types
 
-# log
-from logging import getLogger
-
-logger = getLogger(__name__)
+# log setup
+logger = util.getLogger(__name__)
 logger.debug("hello")
+
+translation = bpy.app.translations.pgettext
+random_name = util.random_name
 
 
 # 2つのベクトルから長さを求める
@@ -185,3 +185,72 @@ class GpSelectState:
                 obj.select = False
 
         self._lick(self.state, _apply)
+
+
+class NP_GPN_OT_GPencilStrokeCountResampler(types.Operator):
+
+    bl_idname = "gpencil.np_gpencil_stroke_count_resampler"
+    bl_label = translation("Sampling strokes")
+    bl_description = translation("Sampling selection strokes by number of points")
+
+    bl_options = {"REGISTER", "UNDO"}
+
+    amount = props.IntProperty(
+        name=translation("number of points"),
+        default=100,
+        min=2,
+    )
+
+    # メニューを実行したときに呼ばれるメソッド
+    def execute(self, context):
+        # context.active_object.data = data.grease_pencils['Stroke']
+        gp_data = context.active_object.data
+        result_count = self.amount
+
+        select_state = GpSelectState(gp_data, context)
+        select_state.save()
+        select_state.deselect_all()
+        select_state.apply(result_count)
+        select_state.load()
+
+        self.report({"INFO"}, "done stroke resample")
+        return {"FINISHED"}
+
+
+class NP_GPN_OT_GPencilStrokeCountNormalizer(types.Operator):
+
+    bl_idname = "gpencil.np_gpencil_stroke_count_normalizer"
+    bl_label = translation("Normalize strokes")
+    bl_description = translation(
+        "Match the maximum number of points " "for the same stroke between frames."
+    )
+    bl_options = {"REGISTER", "UNDO"}
+
+    # メニューを実行したときに呼ばれるメソッド
+    def execute(self, context):
+        # context.active_object.data = data.grease_pencils['Stroke']
+        gp_data = context.active_object.data
+
+        select_state = GpSelectState(gp_data, context)
+        state1 = select_state.save()
+        select_state.deselect_all()
+
+        for li, layer in enumerate(select_state.layers):
+            max_counts = state1["layers"][li]["max_counts"]
+            # 選択レイヤーだけ処理したいので
+            if state1["layers"][li]["select"]:
+                for fi, frame in enumerate(layer.frames):
+                    frame_number = state1["layers"][li]["frames"][fi]["frame_number"]
+                    context.scene.frame_current = frame_number
+                    for si, stroke in enumerate(frame.strokes):
+                        stroke.select = True
+                        stroke_count_resampler(stroke, result_count=max_counts[si])
+                        stroke.select = False
+
+        # context.scene.frame_current = select_state.state["frame_current"]
+
+        select_state.load()
+
+        self.report({"INFO"}, "done stroke resample")
+
+        return {"FINISHED"}
