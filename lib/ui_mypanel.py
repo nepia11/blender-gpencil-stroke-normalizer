@@ -44,6 +44,7 @@ class NP_GPN_PT_GPencilNormalizer(bpy.types.Panel):
             )
         layout.prop(context.scene, "gpn_rainbowStroke_opacity", text="rainbow opacity")
         layout.prop(context.scene, "gpn_rainbowStroke_emphasize_index")
+        layout.prop(context.scene, "gpn_ranbowStroke_emphasize_color")
         layout.separator()
         # ストローク並べ替え
         layout.label(text="Sorting strokes")

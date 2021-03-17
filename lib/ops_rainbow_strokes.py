@@ -96,7 +96,7 @@ class RainbowStrokeObject:
 
         bpy.ops.object.mode_set(mode=orig_mode)
 
-    def update(self, opacity=0.5, emphasize_index=0):
+    def update(self, opacity=0.5, emphasize_index=0, emphasize_color=(0, 0, 0, 0)):
         # old_data = self.rs_obj.data
         old_data = bpy.data.objects[self.rs_obj_name].data
         old_data.name = "trash"
@@ -105,7 +105,7 @@ class RainbowStrokeObject:
         new_data.name = self.rs_obj_name
         for layer in new_data.layers:
             layer.opacity *= opacity
-        self.colorize(new_data, emphasize_index)
+        self.colorize(new_data, emphasize_index, emphasize_color)
         # self.rs_obj.data = new_data
         bpy.data.objects[self.rs_obj_name].data = new_data
         bpy.data.batch_remove([old_data.id_data])
@@ -128,13 +128,15 @@ class RainbowStrokeObject:
         del self.rs_obj_name
 
     @staticmethod
-    def colorize(gp_data: bpy.types.GreasePencil, emphasize_index=0):
+    def colorize(
+        gp_data: bpy.types.GreasePencil, emphasize_index=0, emphasize_color=(0, 0, 0, 0)
+    ):
         for layer in gp_data.layers:
             for frame in layer.frames:
                 rainbow_strokes(frame.strokes)
                 if len(frame.strokes) - 1 > emphasize_index:
                     points = frame.strokes[emphasize_index].points
-                    color = [0, 0, 0, 0]
+                    color = emphasize_color
                     for point in points:
                         point.vertex_color = color
 
@@ -162,6 +164,7 @@ class NP_GPN_OT_RainbowStrokes(bpy.types.Operator):
         """ registerする時にやっときたい処理 あったら勝手に呼ばれるらしい"""
         scene = bpy.types.Scene
         append = cls.__props.append
+
         scene.gpn_rainbowStroke_opacity = bpy.props.FloatProperty(
             name="rainbow_opacity",
             description="rainbowStrokeの透明度",
@@ -175,6 +178,17 @@ class NP_GPN_OT_RainbowStrokes(bpy.types.Operator):
             name="Emphasize index", description="強調するストロークのインデックス", min=0
         )
         append(scene.gpn_rainbowStroke_emphasize_index)
+
+        scene.gpn_ranbowStroke_emphasize_color = bpy.props.FloatVectorProperty(
+            name="Emphasize color",
+            description="強調色",
+            subtype="COLOR",
+            default=(1.0, 1.0, 1.0, 1.0),
+            min=0.0,
+            max=1.0,
+            size=4,
+        )
+        append(scene.gpn_ranbowStroke_emphasize_color)
 
     @classmethod
     def unregister(cls):
@@ -215,12 +229,17 @@ class NP_GPN_OT_RainbowStrokes(bpy.types.Operator):
             return {"FINISHED"}
 
         emphasize_index = context.scene.gpn_rainbowStroke_emphasize_index
+        emphasize_color = context.scene.gpn_ranbowStroke_emphasize_color
         opacity = context.scene.gpn_rainbowStroke_opacity
         # タイマーイベントが来た時にする処理
         if event.type == "TIMER":
             try:
                 # logger.debug("try modal")qq
-                self.rso.update(opacity=opacity, emphasize_index=emphasize_index)
+                self.rso.update(
+                    opacity=opacity,
+                    emphasize_index=emphasize_index,
+                    emphasize_color=emphasize_color,
+                )
             except (KeyError) as e:
                 # モーダルモードを終了
                 logger.exception(f"{e}")
