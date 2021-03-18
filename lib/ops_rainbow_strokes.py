@@ -148,7 +148,7 @@ class NP_GPN_OT_RainbowStrokes(bpy.types.Operator):
     bl_idname = "gpencil.np_rainbow_strokes"
     bl_label = "rainbow strokes"
     bl_description = ""
-    bl_options = {"REGISTER", "UNDO"}
+    # bl_options = {"REGISTER", "UNDO"}
 
     # タイマのハンドラ
     __timer = None
