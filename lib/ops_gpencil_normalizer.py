@@ -1,39 +1,29 @@
-# import pprint
-import random
-import string
-
-import numpy as np
-from bpy import ops, types
+import bpy
 import mathutils
+import numpy as np
+from . import util
+from bpy import ops, props, types
 
-DEBUG = False
+# log setup
+logger = util.getLogger(__name__)
+logger.debug("hello")
 
-
-def debug_print(*args):
-    if DEBUG:
-        print(*args)
-
-
-def random_name(n: int) -> string:
-    return "".join(random.choices(string.ascii_letters + string.digits, k=n))
+translation = bpy.app.translations.pgettext
+random_name = util.random_name
 
 
 # 2つのベクトルから長さを求める
-def calc_vector_length(
-        a: mathutils.Vector, b: mathutils.Vector) -> float:
-    vec = b-a
+def calc_vector_length(a: mathutils.Vector, b: mathutils.Vector) -> float:
+    vec = b - a
     return vec.length
 
 
 # ストロークの長さとポイント数を計算して返す これ分解したほうが良いかもな
-def calc_stroke_length_and_point(
-        gp_stroke: types.GPencilStroke) -> (float, int):
+def calc_stroke_length_and_point(gp_stroke: types.GPencilStroke) -> (float, int):
     vectors = [p.co for p in gp_stroke.points]
     point_count: int = len(vectors)
     norms = [
-        calc_vector_length(
-            vectors[i], vectors[i + 1]
-        ) for i in range(point_count - 1)
+        calc_vector_length(vectors[i], vectors[i + 1]) for i in range(point_count - 1)
     ]
     length = sum(norms)
     return length, point_count
@@ -46,11 +36,20 @@ def count_stroke_points(gp_stroke: types.GPencilStroke) -> int:
 
 # フレーム間の各ストロークのポイント最大数を返す
 def calc_frames_strokes_max_count(gp_frames: types.GPencilFrames) -> ([int]):
+    """
+    [
+        frame[stroke1,2,3,4],
+        frame[stroke1,2,3,4],
+        frame[stroke1,2,3,4],
+        frame[stroke1,2,3,4],
+    ]
+    こんな感じで入ってるのを
+    [stroke_max,stroke_max,stroke_max,stroke_max,]
+    こうしてる感じ
+    """
     frame_len = len(gp_frames)
 
-    debug_print(
-        "#calc_frames_strokes_max_count():\n",
-        "frame_len :", frame_len)
+    logger.debug(f"#calc_frames_strokes_max_count():->frame_len: {frame_len}")
 
     if frame_len == 0:
         return 0
@@ -74,17 +73,6 @@ def calc_frames_strokes_max_count(gp_frames: types.GPencilFrames) -> ([int]):
     # pprint.pprint(results_max)
 
     return results_max
-    """
-    [
-        frame[stroke1,2,3,4],
-        frame[stroke1,2,3,4],
-        frame[stroke1,2,3,4],
-        frame[stroke1,2,3,4],
-    ]
-    こんな感じで入ってるのを
-    [stroke_max,stroke_max,stroke_max,stroke_max,]
-    こうしてる感じ
-    """
 
 
 def calc_offset(src_len: float, segment_len: float, point_count: int) -> float:
@@ -132,39 +120,37 @@ class GpSelectState:
             for fi, frame in enumerate(layer.frames):
                 func(state["layers"][li]["frames"][fi], frame)
                 for si, stroke in enumerate(frame.strokes):
-                    func(state["layers"][li]["frames"]
-                         [fi]["strokes"][si], stroke)
+                    func(state["layers"][li]["frames"][fi]["strokes"][si], stroke)
 
     def save(self) -> dict:
         # state = {"layers": [{"select": False}]*len(self.layers)}
-        state = {"layers": [{"select": False}
-                            for i in range(len(self.layers))]}
+        state = {"layers": [{"select": False} for i in range(len(self.layers))]}
         # 現在のフレームを保存しておく
         state["frame_current"] = self.context.scene.frame_current
 
         def _save(state, obj):
-            debug_print("## start _save()")
-            debug_print("state,obj", state, obj)
+            logger.debug("## start _save()")
+            logger.debug(f"state,obj{state},{obj}")
             obj_type = type(obj)
             if obj_type is types.GPencilLayer:
-                debug_print("### init state[frames]")
+                logger.debug("### init state[frames]")
                 state["frames"] = [{} for i in range(len(obj.frames))]
                 max_counts = calc_frames_strokes_max_count(obj.frames)
                 state["max_counts"] = max_counts
 
             elif obj_type is types.GPencilFrame:
-                debug_print("### init state[strokes]")
+                logger.debug("### init state[strokes]")
                 state["strokes"] = [{} for i in range(len(obj.strokes))]
                 state["frame_number"] = obj.frame_number
 
             state["select"] = obj.select
             state["tag"] = random_name(8)
-            debug_print("### state[select]:", state, obj.select)
+            logger.debug(f"### state[select]:{state},{obj.select}")
 
-        debug_print("# start save() loop")
+        logger.debug("# start save() loop")
         self._lick(state, _save)
         self.state = state
-        debug_print("# end state")
+        logger.debug("# end state")
         # pprint.pprint(self.state)
         return state
 
@@ -184,13 +170,13 @@ class GpSelectState:
 
     # この機能はこいつの責務なのか？
     def apply(self, result_count):
-        debug_print(self.state)
+        logger.debug(self.state)
 
         def _apply(state, obj):
             _type = type(obj)
             is_stroke = _type is types.GPencilStroke
             is_valid = state["select"] and is_stroke
-            # debug_print("state select", state["select"], _type, is_type)
+            # logger.debug(f"state select:{state["select"]} {_type} {is_type}")
             if _type is types.GPencilFrame:
                 self.context.scene.frame_current = state["frame_number"]
             if is_valid:
@@ -199,3 +185,72 @@ class GpSelectState:
                 obj.select = False
 
         self._lick(self.state, _apply)
+
+
+class NP_GPN_OT_GPencilStrokeCountResampler(types.Operator):
+
+    bl_idname = "gpencil.np_gpencil_stroke_count_resampler"
+    bl_label = translation("Sampling strokes")
+    bl_description = translation("Sampling selection strokes by number of points")
+
+    bl_options = {"REGISTER", "UNDO"}
+
+    amount = props.IntProperty(
+        name=translation("number of points"),
+        default=100,
+        min=2,
+    )
+
+    # メニューを実行したときに呼ばれるメソッド
+    def execute(self, context):
+        # context.active_object.data = data.grease_pencils['Stroke']
+        gp_data = context.active_object.data
+        result_count = self.amount
+
+        select_state = GpSelectState(gp_data, context)
+        select_state.save()
+        select_state.deselect_all()
+        select_state.apply(result_count)
+        select_state.load()
+
+        self.report({"INFO"}, "done stroke resample")
+        return {"FINISHED"}
+
+
+class NP_GPN_OT_GPencilStrokeCountNormalizer(types.Operator):
+
+    bl_idname = "gpencil.np_gpencil_stroke_count_normalizer"
+    bl_label = translation("Normalize strokes")
+    bl_description = translation(
+        "Match the maximum number of points " "for the same stroke between frames."
+    )
+    bl_options = {"REGISTER", "UNDO"}
+
+    # メニューを実行したときに呼ばれるメソッド
+    def execute(self, context):
+        # context.active_object.data = data.grease_pencils['Stroke']
+        gp_data = context.active_object.data
+
+        select_state = GpSelectState(gp_data, context)
+        state1 = select_state.save()
+        select_state.deselect_all()
+
+        for li, layer in enumerate(select_state.layers):
+            max_counts = state1["layers"][li]["max_counts"]
+            # 選択レイヤーだけ処理したいので
+            if state1["layers"][li]["select"]:
+                for fi, frame in enumerate(layer.frames):
+                    frame_number = state1["layers"][li]["frames"][fi]["frame_number"]
+                    context.scene.frame_current = frame_number
+                    for si, stroke in enumerate(frame.strokes):
+                        stroke.select = True
+                        stroke_count_resampler(stroke, result_count=max_counts[si])
+                        stroke.select = False
+
+        # context.scene.frame_current = select_state.state["frame_current"]
+
+        select_state.load()
+
+        self.report({"INFO"}, "done stroke resample")
+
+        return {"FINISHED"}

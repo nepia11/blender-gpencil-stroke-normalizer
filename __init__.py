@@ -1,140 +1,99 @@
-if not("bpy" in locals()):
-    from . import translations
-    from . import gpencil_normalizer
-else:
-    import imp
-    imp.reload(translations)
-    imp.reload(gpencil_normalizer)
-
-
+import importlib
+from logging import getLogger, StreamHandler, Formatter, handlers, DEBUG
+import inspect
+import sys
 import bpy
-from bpy import props, types
+import os
+import datetime
 
-
-GpSelectState = gpencil_normalizer.GpSelectState
-stroke_count_resampler = gpencil_normalizer.stroke_count_resampler
-
-# 翻訳用の辞書
-translation_dict = translations.translation_dict
-translation = bpy.app.translations.pgettext
 
 # アドオン用のいろいろ
 bl_info = {
     "name": "Blender Gpencil Stroke Normalizer",
     "author": "nepia",
-    "version": (0, 4, 1),
+    "version": (0, 5, 0),
     "blender": (2, 83, 0),
     "location": "types.VIEW3D_PT_tools_grease_pencil_interpolate",
-    "description":
-            "Provides the ability to arbitrarily adjust the number of points "
-            "in a gpencil stroke.",
+    "description": "Provides the ability to arbitrarily adjust the number of points "
+    "in a gpencil stroke.",
     "warning": "",
-    "support": "TESTING",
     "wiki_url": "",
-    "tracker_url":
-        "https://github.com/nepia11/blender-gpencil-stroke-normalizer/issues",
+    "tracker_url": "https://github.com/nepia11/blender-gpencil-stroke-normalizer/issues",
     "category": "Gpencil",
 }
 
 
-class NP_GPN_OT_GPencilStrokeCountResampler(types.Operator):
-
-    bl_idname = "gpencil.np_gpencil_stroke_count_resampler"
-    bl_label = translation("Sampling strokes")
-    bl_description = translation(
-        "Sampling selection strokes by number of points")
-
-    bl_options = {"REGISTER", "UNDO"}
-
-    amount = props.IntProperty(
-        name=translation("number of points"),
-        default=100,
-        min=1,
-    )
-
-    # メニューを実行したときに呼ばれるメソッド
-    def execute(self, context):
-        # context.active_object.data = data.grease_pencils['Stroke']
-        gp_data = context.active_object.data
-        result_count = self.amount
-
-        select_state = GpSelectState(gp_data, context)
-        select_state.save()
-        select_state.deselect_all()
-        select_state.apply(result_count)
-        select_state.load()
-
-        self.report({"INFO"}, "done stroke resample")
-
-        return {"FINISHED"}
-
-
-class NP_GPN_OT_GPencilStrokeCountNormalizer(types.Operator):
-
-    bl_idname = "gpencil.np_gpencil_stroke_count_normalizer"
-    bl_label = translation("Normalize strokes")
-    bl_description = translation(
-        "Match the maximum number of points "
-        "for the same stroke between frames."
+# log周りの設定
+def setup_logger(log_folder: str, modname=__name__):
+    """ loggerの設定をする """
+    logger = getLogger(modname)
+    logger.setLevel(DEBUG)
+    # log重複回避　https://nigimitama.hatenablog.jp/entry/2021/01/27/084458
+    if not logger.hasHandlers():
+        sh = StreamHandler()
+        sh.setLevel(DEBUG)
+        formatter = Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        sh.setFormatter(formatter)
+        logger.addHandler(sh)
+        fh = handlers.RotatingFileHandler(log_folder, maxBytes=500000, backupCount=2)
+        fh.setLevel(DEBUG)
+        fh_formatter = Formatter(
+            "%(asctime)s - %(filename)s - %(name)s"
+            " - %(lineno)d - %(levelname)s - %(message)s"
         )
-    bl_options = {"REGISTER", "UNDO"}
-
-    # メニューを実行したときに呼ばれるメソッド
-    def execute(self, context):
-        # context.active_object.data = data.grease_pencils['Stroke']
-        gp_data = context.active_object.data
-
-        select_state = GpSelectState(gp_data, context)
-        state1 = select_state.save()
-        select_state.deselect_all()
-
-        for li, layer in enumerate(select_state.layers):
-            max_counts = state1["layers"][li]["max_counts"]
-            # 選択レイヤーだけ処理したいので
-            if state1["layers"][li]["select"]:
-                for fi, frame in enumerate(layer.frames):
-                    frame_number = (
-                        state1["layers"][li]["frames"][fi]["frame_number"]
-                    )
-                    context.scene.frame_current = frame_number
-                    for si, stroke in enumerate(frame.strokes):
-                        stroke.select = True
-                        stroke_count_resampler(
-                            stroke, result_count=max_counts[si])
-                        stroke.select = False
-
-        # context.scene.frame_current = select_state.state["frame_current"]
-
-        select_state.load()
-
-        self.report({"INFO"}, "done stroke resample")
-
-        return {"FINISHED"}
+        fh.setFormatter(fh_formatter)
+        logger.addHandler(fh)
+    return logger
 
 
-def menu_fn(self, context):
-    self.layout.separator()
-    self.layout.operator(
-        NP_GPN_OT_GPencilStrokeCountResampler.bl_idname,
-        text=translation("Sampling strokes")
-        )
-    self.layout.operator(
-        NP_GPN_OT_GPencilStrokeCountNormalizer.bl_idname,
-        text=translation("Normalize strokes")
-        )
+scripts_dir = os.path.dirname(os.path.abspath(__file__))
+log_folder = os.path.join(scripts_dir, f"{datetime.date.today()}.log")
+logger = setup_logger(log_folder, modname=__name__)
+logger.debug("hello")
 
 
-classes = [
-    NP_GPN_OT_GPencilStrokeCountResampler,
-    NP_GPN_OT_GPencilStrokeCountNormalizer,
+# サブモジュールのインポート
+module_names = [
+    "ops_rainbow_strokes",
+    "ops_gpencil_normalizer",
+    "ui_mypanel",
+    "util",
+    "translations",
 ]
+namespace = {}
+for name in module_names:
+    fullname = "{}.{}.{}".format(__package__, "lib", name)
+    # if "bpy" in locals():
+    if fullname in sys.modules:
+        namespace[name] = importlib.reload(sys.modules[fullname])
+    else:
+        namespace[name] = importlib.import_module(fullname)
+logger.debug(namespace)
+
+# モジュールからクラスの取得 このままだと普通のクラスも紛れ込むのでどうしよっかな
+classes = []
+for module in module_names:
+    for module_class in [
+        obj
+        for name, obj in inspect.getmembers(namespace[module])
+        if inspect.isclass(obj)
+    ]:
+        classes.append(module_class)
+
+
+# 翻訳用の辞書
+translation_dict = namespace["translations"].get_dict()
+translation = bpy.app.translations.pgettext
 
 
 def register():
     for c in classes:
-        bpy.utils.register_class(c)
-    # types.VIEW3D_MT_gpencil_edit_context_menu.append(menu_fn)
-    types.VIEW3D_PT_tools_grease_pencil_interpolate.append(menu_fn)
+        logger.debug(f"class:{c},type:{type(c)}")
+        try:
+            # 少々行儀が悪いが厳密に判定するのめんどいので
+            bpy.utils.register_class(c)
+        except Exception as e:
+            logger.exception(e)
 
     # 翻訳辞書の登録
     bpy.app.translations.register(__name__, translation_dict)
@@ -144,10 +103,11 @@ def unregister():
     # 翻訳辞書の登録解除
     bpy.app.translations.unregister(__name__)
 
-    # types.VIEW3D_MT_gpencil_edit_context_menu.remove(menu_fn)
-    types.VIEW3D_PT_tools_grease_pencil_interpolate.remove(menu_fn)
     for c in classes:
-        bpy.utils.unregister_class(c)
+        try:
+            bpy.utils.unregister_class(c)
+        except Exception as e:
+            logger.exception(e)
 
 
 if __name__ == "__main__":
