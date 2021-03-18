@@ -11,9 +11,9 @@ import datetime
 bl_info = {
     "name": "Blender Gpencil Stroke Normalizer",
     "author": "nepia",
-    "version": (0, 5, 0),
+    "version": (0, 6, 0),
     "blender": (2, 83, 0),
-    "location": "types.VIEW3D_PT_tools_grease_pencil_interpolate",
+    "location": "view3d > ui > GPN",
     "description": "Provides the ability to arbitrarily adjust the number of points "
     "in a gpencil stroke.",
     "warning": "",
