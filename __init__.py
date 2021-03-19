@@ -56,6 +56,7 @@ logger.debug("hello")
 module_names = [
     "ops_rainbow_strokes",
     "ops_gpencil_normalizer",
+    "ops_capture_color",
     "ui_mypanel",
     "util",
     "translations",
