@@ -129,29 +129,28 @@ class GpSelectState:
         state["frame_current"] = self.context.scene.frame_current
 
         def _save(state, obj):
-            logger.debug("## start _save()")
-            logger.debug(f"state,obj{state},{obj}")
+            # logger.debug("## start _save()")
+            # logger.debug(f"state,obj{state},{obj}")
             obj_type = type(obj)
             if obj_type is types.GPencilLayer:
-                logger.debug("### init state[frames]")
+                # logger.debug("### init state[frames]")
                 state["frames"] = [{} for i in range(len(obj.frames))]
                 max_counts = calc_frames_strokes_max_count(obj.frames)
                 state["max_counts"] = max_counts
 
             elif obj_type is types.GPencilFrame:
-                logger.debug("### init state[strokes]")
+                # logger.debug("### init state[strokes]")
                 state["strokes"] = [{} for i in range(len(obj.strokes))]
                 state["frame_number"] = obj.frame_number
 
             state["select"] = obj.select
             state["tag"] = random_name(8)
-            logger.debug(f"### state[select]:{state},{obj.select}")
+            # logger.debug(f"### state[select]:{state},{obj.select}")
 
-        logger.debug("# start save() loop")
+        # logger.debug("# start save() loop")
         self._lick(state, _save)
         self.state = state
-        logger.debug("# end state")
-        # pprint.pprint(self.state)
+        # logger.debug("# end state")
         return state
 
     def load(self):
@@ -195,9 +194,10 @@ class NP_GPN_OT_GPencilStrokeCountResampler(types.Operator):
 
     bl_options = {"REGISTER", "UNDO"}
 
-    amount = props.IntProperty(
+    amount: props.IntProperty(
         name=translation("number of points"),
         default=100,
+        soft_max=500,
         min=2,
     )
 
